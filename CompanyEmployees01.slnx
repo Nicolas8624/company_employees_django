@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="CompanyEmployees01/CompanyEmployees01.csproj" />
+  <Project Path="Contracts/Contracts.csproj" Id="898c2335-7047-41d5-a075-b9067aed2580" />
+  <Project Path="LoggingService/LoggingService.csproj" Id="c56ed574-91e9-4388-86eb-b020013332ed" />
+</Solution>
