@@ -361,3 +361,13 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Python & Django specific ignores
+__pycache__/
+*.py[cod]
+*$py.class
+company_employees_django/db.sqlite3
+company_employees_django/logs/
+.venv/
+venv/
+ENV/

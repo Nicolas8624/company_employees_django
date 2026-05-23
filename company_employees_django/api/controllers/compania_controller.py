@@ -1,0 +1,170 @@
+"""
+Controller para Compañías.
+
+Maneja las peticiones HTTP y delega TODA la lógica de negocio
+al CompaniaService. NO accede al ORM directamente.
+
+Flujo: Controller → Service → UnitOfWork → Repository → ORM → Database
+"""
+import logging
+from dataclasses import asdict
+
+from rest_framework import status
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from api.serializers.compania_serializer import (
+    CompaniaCreateSerializer,
+    CompaniaSerializer,
+)
+from api.serializers.compania_con_empleados_serializer import (
+    CompaniaConEmpleadosSerializer,
+)
+from api.serializers.empleado_serializer import EmpleadoSerializer
+from application.services.compania_service import CompaniaService
+from infrastructure.unit_of_work.unit_of_work import UnitOfWork
+
+logger = logging.getLogger(__name__)
+
+
+class CompaniaListController(APIView):
+    """
+    GET /api/companias     → Listar todas las compañías
+    POST /api/companias    → Crear nueva compañía
+    """
+
+    def get(self, request: Request) -> Response:
+        """Listar todas las compañías."""
+        logger.info("GET /api/companias")
+        service = CompaniaService(UnitOfWork())
+        companias = service.get_all_companias()
+        serializer = CompaniaSerializer(
+            [asdict(c) for c in companias], many=True
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request: Request) -> Response:
+        """Crear una nueva compañía."""
+        logger.info("POST /api/companias")
+        serializer = CompaniaCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            logger.warning("Datos inválidos: %s", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        service = CompaniaService(UnitOfWork())
+        compania = service.create_compania(serializer.validated_data)
+        response_serializer = CompaniaSerializer(asdict(compania))
+        return Response(
+            response_serializer.data, status=status.HTTP_201_CREATED
+        )
+
+
+class CompaniaDetailController(APIView):
+    """
+    GET /api/companias/{id}     → Obtener compañía por ID
+    PUT /api/companias/{id}     → Actualizar compañía
+    DELETE /api/companias/{id}  → Eliminar compañía
+    """
+
+    def get(self, request: Request, pk: int) -> Response:
+        """Obtener una compañía por su ID."""
+        logger.info("GET /api/companias/%s", pk)
+        service = CompaniaService(UnitOfWork())
+        compania = service.get_compania_by_id(pk)
+        if compania is None:
+            return Response(
+                {"error": "Compañía no encontrada"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        serializer = CompaniaSerializer(asdict(compania))
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request: Request, pk: int) -> Response:
+        """Actualizar una compañía existente."""
+        logger.info("PUT /api/companias/%s", pk)
+        serializer = CompaniaCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            logger.warning("Datos inválidos: %s", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        service = CompaniaService(UnitOfWork())
+        compania = service.update_compania(pk, serializer.validated_data)
+        if compania is None:
+            return Response(
+                {"error": "Compañía no encontrada"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        response_serializer = CompaniaSerializer(asdict(compania))
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+    def delete(self, request: Request, pk: int) -> Response:
+        """Eliminar una compañía."""
+        logger.info("DELETE /api/companias/%s", pk)
+        service = CompaniaService(UnitOfWork())
+        deleted = service.delete_compania(pk)
+        if not deleted:
+            return Response(
+                {"error": "Compañía no encontrada"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CompaniaEmpleadosController(APIView):
+    """
+    GET /api/companias/{id}/empleados → Obtener empleados de una compañía
+    """
+
+    def get(self, request: Request, pk: int) -> Response:
+        """Obtener todos los empleados de una compañía."""
+        logger.info("GET /api/companias/%s/empleados", pk)
+        service = CompaniaService(UnitOfWork())
+        empleados = service.get_empleados_by_compania(pk)
+        if empleados is None:
+            return Response(
+                {"error": "Compañía no encontrada"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        serializer = EmpleadoSerializer(
+            [asdict(e) for e in empleados], many=True
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CompaniaConEmpleadosController(APIView):
+    """
+    POST /api/companias/con-empleados → Crear compañía + empleados transaccional
+
+    Endpoint transaccional obligatorio:
+    - Crea una compañía y múltiples empleados en una sola transacción
+    - Si falla cualquier operación, hace rollback completo
+    """
+
+    def post(self, request: Request) -> Response:
+        """Crear compañía con empleados en una sola transacción."""
+        logger.info("POST /api/companias/con-empleados — TRANSACCIONAL")
+        serializer = CompaniaConEmpleadosSerializer(data=request.data)
+        if not serializer.is_valid():
+            logger.warning("Datos inválidos: %s", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            service = CompaniaService(UnitOfWork())
+            resultado = service.create_compania_con_empleados(
+                serializer.validated_data
+            )
+            response_data = {
+                "compania": CompaniaSerializer(asdict(resultado["compania"])).data,
+                "empleados": EmpleadoSerializer(
+                    [asdict(e) for e in resultado["empleados"]], many=True
+                ).data,
+            }
+            return Response(response_data, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            logger.error("Error en transacción: %s", str(e))
+            return Response(
+                {"error": f"Error en la transacción: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
