@@ -1,0 +1,278 @@
+# API REST Compañías y Empleados — Django + Onion Architecture
+
+## Contexto
+
+Actividad académica del SENA (ADSO) que requiere **transferir los conceptos** del proyecto ASP.NET Core existente (`CompanyEmployees01`) hacia Python + Django, aplicando estrictamente:
+
+- **Onion Architecture** (Domain → Application → Infrastructure → API)
+- **Repository Pattern** (sin commit en repositories)
+- **Unit of Work** (`transaction.atomic`)
+- **Service Layer** (toda la lógica de negocio)
+- **Logging** (Python `logging`)
+- **Transacciones** (endpoint transaccional con rollback completo)
+
+> [!IMPORTANT]
+> El proyecto Django se creará como una **carpeta separada** dentro del workspace llamada `company_employees_django/`, para no mezclar con el proyecto ASP.NET Core existente.
+
+---
+
+## Propuestos Cambios
+
+### 1. Inicialización del Proyecto Django
+
+#### [NEW] `company_employees_django/`
+
+- Crear proyecto Django con `django-admin startproject`
+- Instalar Django REST Framework
+- Configurar `settings.py` con SQLite, DRF, logging
+- Crear `requirements.txt`
+
+Estructura raíz:
+```
+company_employees_django/
+├── manage.py
+├── requirements.txt
+├── config/              ← Proyecto Django (settings, urls, wsgi)
+│   ├── __init__.py
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py
+├── domain/              ← Capa Domain
+├── application/         ← Capa Application
+├── infrastructure/      ← Capa Infrastructure
+└── api/                 ← Capa API
+```
+
+---
+
+### 2. Capa Domain (Núcleo — sin dependencias externas)
+
+No depende de Django, ni del ORM, ni de DRF. Solo Python puro.
+
+#### [NEW] `domain/__init__.py`
+#### [NEW] `domain/entities/__init__.py`
+
+#### [NEW] `domain/entities/compania.py`
+Dataclass pura con campos: `id`, `nombre`, `direccion`, `telefono`, `fecha_creacion`
+
+#### [NEW] `domain/entities/empleado.py`
+Dataclass pura con campos: `id`, `nombre`, `apellido`, `correo`, `cargo`, `salario`, `compania_id`
+
+#### [NEW] `domain/interfaces/__init__.py`
+
+#### [NEW] `domain/interfaces/i_compania_repository.py`
+Interfaz abstracta (ABC) con métodos: `get_all()`, `get_by_id()`, `create()`, `update()`, `delete()`, `find_by_condition()`
+
+#### [NEW] `domain/interfaces/i_empleado_repository.py`
+Interfaz abstracta (ABC) con los mismos métodos base
+
+#### [NEW] `domain/interfaces/i_unit_of_work.py`
+Interfaz abstracta con métodos: `__enter__()`, `__exit__()`, `commit()`, `rollback()`, propiedades para acceder a repositories
+
+---
+
+### 3. Capa Application (Services + DTOs)
+
+Depende únicamente de Domain.
+
+#### [NEW] `application/__init__.py`
+#### [NEW] `application/services/__init__.py`
+
+#### [NEW] `application/services/compania_service.py`
+- `get_all_companias()`
+- `get_compania_by_id(id)`
+- `create_compania(data)`
+- `update_compania(id, data)`
+- `delete_compania(id)`
+- `get_empleados_by_compania(id)`
+- `create_compania_con_empleados(data)` ← **Transaccional**
+
+#### [NEW] `application/services/empleado_service.py`
+- `get_all_empleados()`
+- `get_empleado_by_id(id)`
+- `create_empleado(data)`
+- `update_empleado(id, data)`
+- `delete_empleado(id)`
+
+#### [NEW] `application/dtos/__init__.py`
+
+#### [NEW] `application/dtos/compania_dto.py`
+DTOs para request/response de compañía
+
+#### [NEW] `application/dtos/empleado_dto.py`
+DTOs para request/response de empleado
+
+---
+
+### 4. Capa Infrastructure (ORM, Repositories, UoW)
+
+Aquí vive Django ORM y la implementación concreta de los patrones.
+
+#### [NEW] `infrastructure/__init__.py`
+
+#### [NEW] `infrastructure/database/__init__.py`
+
+#### [NEW] `infrastructure/database/models.py`
+Modelos Django ORM:
+- `CompaniaModel`: `nombre`, `direccion`, `telefono`, `fecha_creacion`
+- `EmpleadoModel`: `nombre`, `apellido`, `correo`, `cargo`, `salario`, `compania` (FK)
+
+#### [NEW] `infrastructure/repositories/__init__.py`
+
+#### [NEW] `infrastructure/repositories/compania_repository.py`
+Implementa `ICompaniaRepository` usando Django ORM.
+- **NO hace commit** — solo operaciones CRUD contra el ORM.
+
+#### [NEW] `infrastructure/repositories/empleado_repository.py`
+Implementa `IEmpleadoRepository` usando Django ORM.
+- **NO hace commit**.
+
+#### [NEW] `infrastructure/unit_of_work/__init__.py`
+
+#### [NEW] `infrastructure/unit_of_work/unit_of_work.py`
+Implementa `IUnitOfWork` usando `transaction.atomic`:
+- Context manager (`with` statement)
+- Provee acceso a `compania_repository` y `empleado_repository`
+- Maneja `commit` y `rollback` automáticos
+- **Logging** en cada transacción
+
+#### [NEW] `infrastructure/seed/__init__.py`
+
+#### [NEW] `infrastructure/seed/seed_data.py`
+Command de Django para poblar datos iniciales de prueba (compañías y empleados de ejemplo)
+
+---
+
+### 5. Capa API (Controllers, Serializers, Routes)
+
+#### [NEW] `api/__init__.py`
+
+#### [NEW] `api/serializers/__init__.py`
+
+#### [NEW] `api/serializers/compania_serializer.py`
+Serializers DRF para Compañía (validación de entrada/salida)
+
+#### [NEW] `api/serializers/empleado_serializer.py`
+Serializers DRF para Empleado
+
+#### [NEW] `api/serializers/compania_con_empleados_serializer.py`
+Serializer para el endpoint transaccional (compañía + lista de empleados)
+
+#### [NEW] `api/controllers/__init__.py`
+
+#### [NEW] `api/controllers/compania_controller.py`
+APIView que delega al `CompaniaService`:
+- `GET /api/companias` → lista
+- `GET /api/companias/{id}` → detalle
+- `POST /api/companias` → crear
+- `PUT /api/companias/{id}` → actualizar
+- `DELETE /api/companias/{id}` → eliminar
+- `GET /api/companias/{id}/empleados` → empleados de la compañía
+- `POST /api/companias/con-empleados` → **transaccional**
+
+#### [NEW] `api/controllers/empleado_controller.py`
+APIView que delega al `EmpleadoService`:
+- `GET /api/empleados` → lista
+- `GET /api/empleados/{id}` → detalle
+- `POST /api/empleados` → crear
+- `PUT /api/empleados/{id}` → actualizar
+- `DELETE /api/empleados/{id}` → eliminar
+
+#### [NEW] `api/routes/__init__.py`
+
+#### [NEW] `api/routes/urls.py`
+Configuración de URLs para todos los endpoints
+
+#### [NEW] `api/middlewares/__init__.py`
+
+#### [NEW] `api/middlewares/error_handler.py`
+Middleware global para manejo de errores y logging de excepciones
+
+---
+
+### 6. Configuración y Logging
+
+#### [NEW] `config/settings.py`
+- `INSTALLED_APPS` con `rest_framework` e `infrastructure.database`
+- `DATABASES` con SQLite
+- `LOGGING` configurado con handlers de consola y archivo
+- `REST_FRAMEWORK` con configuración por defecto
+
+#### [NEW] `config/urls.py`
+Incluye las rutas de `api/routes/urls.py` bajo el prefijo `/api/`
+
+---
+
+### 7. Documentación
+
+#### [MODIFY] `README.md`
+README completo con:
+- Descripción del proyecto
+- Stack tecnológico
+- Arquitectura aplicada
+- Cómo instalar y ejecutar
+- Endpoints disponibles
+- Uso de IA (Antigravity)
+
+---
+
+## Flujo Arquitectónico
+
+```mermaid
+graph TD
+    A[Cliente HTTP] --> B[API Layer<br/>Controllers]
+    B --> C[Application Layer<br/>Services]
+    C --> D[Unit of Work<br/>transaction.atomic]
+    D --> E[Infrastructure Layer<br/>Repositories]
+    E --> F[Django ORM<br/>Models]
+    F --> G[(SQLite Database)]
+    
+    H[Domain Layer<br/>Entities + Interfaces] -.-> C
+    H -.-> E
+    
+    style A fill:#e1f5fe
+    style B fill:#bbdefb
+    style C fill:#90caf9
+    style D fill:#64b5f6
+    style E fill:#42a5f5
+    style F fill:#2196f3
+    style G fill:#1565c0,color:#fff
+    style H fill:#fff9c4
+```
+
+## Endpoints Completos
+
+| Método | URL | Descripción |
+|--------|-----|-------------|
+| GET | `/api/companias` | Listar todas las compañías |
+| GET | `/api/companias/{id}` | Obtener compañía por ID |
+| POST | `/api/companias` | Crear compañía |
+| PUT | `/api/companias/{id}` | Actualizar compañía |
+| DELETE | `/api/companias/{id}` | Eliminar compañía |
+| GET | `/api/companias/{id}/empleados` | Empleados de una compañía |
+| POST | `/api/companias/con-empleados` | **Transaccional**: crear compañía + empleados |
+| GET | `/api/empleados` | Listar todos los empleados |
+| GET | `/api/empleados/{id}` | Obtener empleado por ID |
+| POST | `/api/empleados` | Crear empleado |
+| PUT | `/api/empleados/{id}` | Actualizar empleado |
+| DELETE | `/api/empleados/{id}` | Eliminar empleado |
+
+---
+
+## Plan de Verificación
+
+### Pruebas Automatizadas
+1. `python manage.py migrate` — verificar migraciones
+2. `python manage.py seed` — verificar seed data
+3. `python manage.py runserver` — verificar inicio del servidor
+4. Probar cada endpoint con el browser subagent:
+   - CRUD completo de compañías
+   - CRUD completo de empleados
+   - Endpoint transaccional (caso exitoso y rollback)
+5. Verificar logs en consola y archivo
+
+### Verificación Manual
+- Verificar que la estructura de carpetas sigue Onion Architecture
+- Verificar que controllers NO acceden al ORM
+- Verificar que repositories NO hacen commit
+- Verificar que el logging registra todos los eventos requeridos
