@@ -4,6 +4,10 @@ Implementación concreta del Unit of Work.
 Usa transaction.atomic de Django para coordinar transacciones
 entre múltiples repositorios. Es el ÚNICO responsable de
 commit y rollback.
+
+El flag _committed provee claridad semántica: indica que la
+operación de negocio fue completada exitosamente dentro del
+bloque transaccional.
 """
 import logging
 
@@ -26,12 +30,17 @@ class UnitOfWork(IUnitOfWork):
             uow.empleado_repository.create(...)
             uow.commit()
         # Si ocurre una excepción, rollback automático
+
+    El flag _committed garantiza que el servicio llamó commit()
+    explícitamente antes de que la transacción se confirme.
+    Si no se llama commit(), se registra un warning en el log.
     """
 
     def __init__(self) -> None:
         self._compania_repository = CompaniaRepository()
         self._empleado_repository = EmpleadoRepository()
         self._atomic = None
+        self._committed: bool = False
 
     @property
     def compania_repository(self) -> CompaniaRepository:
@@ -46,6 +55,7 @@ class UnitOfWork(IUnitOfWork):
     def __enter__(self) -> "UnitOfWork":
         """Iniciar la transacción con transaction.atomic."""
         logger.info("UnitOfWork: Iniciando transacción")
+        self._committed = False
         self._atomic = transaction.atomic()
         self._atomic.__enter__()
         return self
@@ -53,12 +63,20 @@ class UnitOfWork(IUnitOfWork):
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """
         Finalizar la transacción.
-        Si hubo excepción, Django hace rollback automático.
+
+        - Si hubo excepción: Django hace rollback automático.
+        - Si no hubo excepción pero no se llamó commit(): warning de log.
+        - Si se llamó commit() y no hubo excepción: Django confirma al salir.
         """
         if exc_type is not None:
             logger.error(
                 "UnitOfWork: ROLLBACK — Error tipo=%s, mensaje=%s",
                 exc_type.__name__, str(exc_val)
+            )
+        elif not self._committed:
+            logger.warning(
+                "UnitOfWork: Transacción finalizada sin llamar commit(). "
+                "Esto puede indicar un flujo incompleto."
             )
         self._atomic.__exit__(exc_type, exc_val, exc_tb)
 
@@ -66,19 +84,27 @@ class UnitOfWork(IUnitOfWork):
         """
         Confirmar la transacción.
 
-        En Django con transaction.atomic, el commit ocurre automáticamente
-        al salir del bloque 'with' sin excepciones. Este método existe
-        para mantener compatibilidad con la interfaz IUnitOfWork y para logging.
+        Marca el flag _committed como True para indicar que la operación
+        de negocio fue completada correctamente. En Django con
+        transaction.atomic, el commit real ocurre al salir del bloque
+        'with' sin excepciones. Este método proporciona:
+
+        1. Señal semántica de que la operación terminó con éxito.
+        2. Logging del commit para trazabilidad.
+        3. Detección de flujos donde no se llama commit().
         """
-        logger.info("UnitOfWork: COMMIT — Transacción confirmada exitosamente")
+        self._committed = True
+        logger.info("UnitOfWork: COMMIT — Transacción marcada como confirmada")
 
     def rollback(self) -> None:
         """
         Revertir la transacción.
 
         En Django con transaction.atomic, el rollback ocurre automáticamente
-        al lanzar una excepción dentro del bloque 'with'.
+        al lanzar una excepción dentro del bloque 'with'. Este método
+        fuerza el rollback explícitamente lanzando una excepción.
         """
+        self._committed = False
         logger.warning("UnitOfWork: ROLLBACK — Revirtiendo transacción")
         raise transaction.TransactionManagementError(
             "Rollback forzado por el UnitOfWork"
