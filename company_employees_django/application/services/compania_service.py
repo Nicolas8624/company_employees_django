@@ -4,12 +4,15 @@ Servicio de aplicación para Compañías.
 Contiene toda la lógica de negocio relacionada con compañías.
 Los controllers delegan aquí. Este servicio usa el UnitOfWork
 para coordinar la persistencia.
+
+Las validaciones de negocio se delegan a las entidades de dominio.
 """
 import logging
 from typing import Any, Dict, List, Optional
 
 from domain.entities.compania import Compania
 from domain.entities.empleado import Empleado
+from domain.exceptions import EntityNotFoundError
 from domain.interfaces.i_unit_of_work import IUnitOfWork
 
 logger = logging.getLogger(__name__)
@@ -37,7 +40,12 @@ class CompaniaService:
             return compania
 
     def create_compania(self, data: Dict[str, Any]) -> Compania:
-        """Crear una nueva compañía."""
+        """
+        Crear una nueva compañía.
+
+        La entidad de dominio valida las reglas de negocio
+        antes de persistir.
+        """
         logger.info("Creando nueva compañía: %s", data.get("nombre", ""))
         with self._uow:
             compania = Compania(
@@ -45,6 +53,9 @@ class CompaniaService:
                 direccion=data["direccion"],
                 telefono=data["telefono"],
             )
+            # Validación de reglas de negocio en el dominio
+            compania.validar()
+
             created = self._uow.compania_repository.create(compania)
             self._uow.commit()
             logger.info("Compañía creada exitosamente con ID: %s", created.id)
@@ -56,10 +67,26 @@ class CompaniaService:
         """Actualizar una compañía existente."""
         logger.info("Actualizando compañía con ID: %s", compania_id)
         with self._uow:
-            updated = self._uow.compania_repository.update(compania_id, data)
-            if updated is None:
+            existing = self._uow.compania_repository.get_by_id(compania_id)
+            if existing is None:
                 logger.warning("Compañía con ID %s no encontrada para actualizar", compania_id)
                 return None
+            
+            if "nombre" in data:
+                existing.nombre = data["nombre"]
+            if "direccion" in data:
+                existing.direccion = data["direccion"]
+            if "telefono" in data:
+                existing.telefono = data["telefono"]
+                
+            existing.__post_init__()
+            existing.validar()
+            
+            updated = self._uow.compania_repository.update(compania_id, {
+                "nombre": existing.nombre,
+                "direccion": existing.direccion,
+                "telefono": existing.telefono,
+            })
             self._uow.commit()
             logger.info("Compañía con ID %s actualizada exitosamente", compania_id)
             return updated
@@ -94,6 +121,9 @@ class CompaniaService:
 
         Si falla la creación de cualquier empleado, se hace rollback completo
         y no se guarda nada (ni la compañía ni los empleados).
+
+        Las validaciones de negocio se ejecutan en las entidades de dominio
+        ANTES de intentar persistir.
         """
         logger.info("=== INICIO TRANSACCIÓN: Crear compañía con empleados ===")
         logger.info("Compañía: %s | Empleados: %d",
@@ -101,16 +131,18 @@ class CompaniaService:
 
         with self._uow:
             try:
-                # Crear la compañía
+                # Crear y validar la compañía
                 compania = Compania(
                     nombre=data["nombre"],
                     direccion=data["direccion"],
                     telefono=data["telefono"],
                 )
+                compania.validar()
+
                 compania_creada = self._uow.compania_repository.create(compania)
                 logger.info("Compañía creada en transacción: ID=%s", compania_creada.id)
 
-                # Crear los empleados
+                # Crear y validar los empleados
                 empleados_creados: List[Empleado] = []
                 for emp_data in data.get("empleados", []):
                     empleado = Empleado(
@@ -121,11 +153,13 @@ class CompaniaService:
                         salario=emp_data["salario"],
                         compania_id=compania_creada.id,
                     )
+                    # Validación de reglas de negocio en el dominio
+                    empleado.validar()
+
                     empleado_creado = self._uow.empleado_repository.create(empleado)
                     empleados_creados.append(empleado_creado)
-                    logger.info("Empleado creado en transacción: ID=%s, nombre=%s %s",
-                                empleado_creado.id, empleado_creado.nombre,
-                                empleado_creado.apellido)
+                    logger.info("Empleado creado en transacción: ID=%s, nombre=%s",
+                                empleado_creado.id, empleado_creado.nombre_completo())
 
                 # Commit global de toda la transacción
                 self._uow.commit()

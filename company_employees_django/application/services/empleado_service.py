@@ -4,6 +4,8 @@ Servicio de aplicación para Empleados.
 Contiene toda la lógica de negocio relacionada con empleados.
 Los controllers delegan aquí. Este servicio usa el UnitOfWork
 para coordinar la persistencia.
+
+Las validaciones de negocio se delegan a las entidades de dominio.
 """
 import logging
 from typing import Any, Dict, List, Optional
@@ -36,7 +38,12 @@ class EmpleadoService:
             return empleado
 
     def create_empleado(self, data: Dict[str, Any]) -> Empleado:
-        """Crear un nuevo empleado."""
+        """
+        Crear un nuevo empleado.
+
+        La entidad de dominio valida las reglas de negocio
+        antes de persistir.
+        """
         logger.info("Creando nuevo empleado: %s %s",
                      data.get("nombre", ""), data.get("apellido", ""))
         with self._uow:
@@ -48,6 +55,9 @@ class EmpleadoService:
                 salario=data["salario"],
                 compania_id=data["compania_id"],
             )
+            # Validación de reglas de negocio en el dominio
+            empleado.validar()
+
             created = self._uow.empleado_repository.create(empleado)
             self._uow.commit()
             logger.info("Empleado creado exitosamente con ID: %s", created.id)
@@ -59,10 +69,35 @@ class EmpleadoService:
         """Actualizar un empleado existente."""
         logger.info("Actualizando empleado con ID: %s", empleado_id)
         with self._uow:
-            updated = self._uow.empleado_repository.update(empleado_id, data)
-            if updated is None:
+            existing = self._uow.empleado_repository.get_by_id(empleado_id)
+            if existing is None:
                 logger.warning("Empleado con ID %s no encontrado para actualizar", empleado_id)
                 return None
+            
+            if "nombre" in data:
+                existing.nombre = data["nombre"]
+            if "apellido" in data:
+                existing.apellido = data["apellido"]
+            if "correo" in data:
+                existing.correo = data["correo"]
+            if "cargo" in data:
+                existing.cargo = data["cargo"]
+            if "salario" in data:
+                existing.salario = data["salario"]
+            if "compania_id" in data:
+                existing.compania_id = data["compania_id"]
+                
+            existing.__post_init__()
+            existing.validar()
+            
+            updated = self._uow.empleado_repository.update(empleado_id, {
+                "nombre": existing.nombre,
+                "apellido": existing.apellido,
+                "correo": existing.correo,
+                "cargo": existing.cargo,
+                "salario": existing.salario,
+                "compania_id": existing.compania_id,
+            })
             self._uow.commit()
             logger.info("Empleado con ID %s actualizado exitosamente", empleado_id)
             return updated
