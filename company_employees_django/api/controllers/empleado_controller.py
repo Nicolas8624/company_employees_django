@@ -5,6 +5,9 @@ Maneja las peticiones HTTP y delega TODA la lógica de negocio
 al EmpleadoService. NO accede al ORM directamente.
 
 Flujo: Controller → Service → UnitOfWork → Repository → ORM → Database
+
+Usa ServiceLocator para obtener los servicios sin conocer
+las implementaciones concretas de Infrastructure.
 """
 import logging
 from dataclasses import asdict
@@ -18,8 +21,8 @@ from api.serializers.empleado_serializer import (
     EmpleadoCreateSerializer,
     EmpleadoSerializer,
 )
-from application.services.empleado_service import EmpleadoService
-from infrastructure.unit_of_work.unit_of_work import UnitOfWork
+from domain.exceptions import DomainValidationError
+from infrastructure.service_locator import ServiceLocator
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +36,7 @@ class EmpleadoListController(APIView):
     def get(self, request: Request) -> Response:
         """Listar todos los empleados."""
         logger.info("GET /api/empleados")
-        service = EmpleadoService(UnitOfWork())
+        service = ServiceLocator.get_empleado_service()
         empleados = service.get_all_empleados()
         serializer = EmpleadoSerializer(
             [asdict(e) for e in empleados], many=True
@@ -48,12 +51,18 @@ class EmpleadoListController(APIView):
             logger.warning("Datos inválidos: %s", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        service = EmpleadoService(UnitOfWork())
-        empleado = service.create_empleado(serializer.validated_data)
-        response_serializer = EmpleadoSerializer(asdict(empleado))
-        return Response(
-            response_serializer.data, status=status.HTTP_201_CREATED
-        )
+        try:
+            service = ServiceLocator.get_empleado_service()
+            empleado = service.create_empleado(serializer.validated_data)
+            response_serializer = EmpleadoSerializer(asdict(empleado))
+            return Response(
+                response_serializer.data, status=status.HTTP_201_CREATED
+            )
+        except DomainValidationError as e:
+            logger.warning("Validación de dominio fallida: %s", e.mensaje)
+            return Response(
+                {"error": e.mensaje}, status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class EmpleadoDetailController(APIView):
@@ -66,7 +75,7 @@ class EmpleadoDetailController(APIView):
     def get(self, request: Request, pk: int) -> Response:
         """Obtener un empleado por su ID."""
         logger.info("GET /api/empleados/%s", pk)
-        service = EmpleadoService(UnitOfWork())
+        service = ServiceLocator.get_empleado_service()
         empleado = service.get_empleado_by_id(pk)
         if empleado is None:
             return Response(
@@ -84,20 +93,26 @@ class EmpleadoDetailController(APIView):
             logger.warning("Datos inválidos: %s", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        service = EmpleadoService(UnitOfWork())
-        empleado = service.update_empleado(pk, serializer.validated_data)
-        if empleado is None:
+        try:
+            service = ServiceLocator.get_empleado_service()
+            empleado = service.update_empleado(pk, serializer.validated_data)
+            if empleado is None:
+                return Response(
+                    {"error": "Empleado no encontrado"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            response_serializer = EmpleadoSerializer(asdict(empleado))
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
+        except DomainValidationError as e:
+            logger.warning("Validación de dominio fallida: %s", e.mensaje)
             return Response(
-                {"error": "Empleado no encontrado"},
-                status=status.HTTP_404_NOT_FOUND,
+                {"error": e.mensaje}, status=status.HTTP_400_BAD_REQUEST
             )
-        response_serializer = EmpleadoSerializer(asdict(empleado))
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
 
     def delete(self, request: Request, pk: int) -> Response:
         """Eliminar un empleado."""
         logger.info("DELETE /api/empleados/%s", pk)
-        service = EmpleadoService(UnitOfWork())
+        service = ServiceLocator.get_empleado_service()
         deleted = service.delete_empleado(pk)
         if not deleted:
             return Response(

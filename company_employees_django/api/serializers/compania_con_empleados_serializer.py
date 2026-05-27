@@ -18,12 +18,6 @@ class EmpleadoEnCompaniaSerializer(serializers.Serializer):
         max_digits=12, decimal_places=2, required=True
     )
 
-    def validate_salario(self, value):
-        """Validar que el salario sea positivo."""
-        if value <= 0:
-            raise serializers.ValidationError("El salario debe ser mayor a cero.")
-        return value
-
 
 class CompaniaConEmpleadosSerializer(serializers.Serializer):
     """
@@ -46,9 +40,3 @@ class CompaniaConEmpleadosSerializer(serializers.Serializer):
                 "Debe incluir al menos un empleado."
             )
         return value
-
-    def validate_nombre(self, value: str) -> str:
-        """Validar que el nombre no esté vacío."""
-        if not value.strip():
-            raise serializers.ValidationError("El nombre no puede estar vacío.")
-        return value.strip()
