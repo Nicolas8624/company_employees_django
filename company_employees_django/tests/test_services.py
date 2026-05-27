@@ -9,6 +9,7 @@ from django.test import TestCase
 
 from application.services.compania_service import CompaniaService
 from application.services.empleado_service import EmpleadoService
+from domain.exceptions import DomainValidationError
 from infrastructure.database.models import CompaniaModel, EmpleadoModel
 from infrastructure.unit_of_work.unit_of_work import UnitOfWork
 
@@ -139,3 +140,44 @@ class OnionArchitectureTestCase(TestCase):
         # Verificar que NO se insertó nada
         self.assertEqual(CompaniaModel.objects.count(), companias_antes)
         self.assertEqual(EmpleadoModel.objects.count(), empleados_antes)
+
+    def test_actualizar_compania_validacion_dominio(self):
+        """Probar que al actualizar una compañía con datos inválidos se lanza DomainValidationError."""
+        compania = self.compania_service.create_compania({
+            "nombre": "Compania Valida",
+            "direccion": "Direccion Valida",
+            "telefono": "123"
+        })
+        
+        # Intentar actualizar con nombre vacío
+        with self.assertRaises(DomainValidationError):
+            self.compania_service.update_compania(compania.id, {"nombre": ""})
+            
+        # Intentar actualizar con direccion vacía
+        with self.assertRaises(DomainValidationError):
+            self.compania_service.update_compania(compania.id, {"direccion": "   "})
+
+    def test_actualizar_empleado_validacion_dominio(self):
+        """Probar que al actualizar un empleado con salario inválido se lanza DomainValidationError."""
+        compania = self.compania_service.create_compania({
+            "nombre": "Compania Para Empleado",
+            "direccion": "Direccion",
+            "telefono": "123"
+        })
+        
+        empleado = self.empleado_service.create_empleado({
+            "nombre": "Juan",
+            "apellido": "Gomez",
+            "correo": "juan@gomez.com",
+            "cargo": "Dev",
+            "salario": Decimal("1000.00"),
+            "compania_id": compania.id
+        })
+        
+        # Intentar actualizar con salario negativo
+        with self.assertRaises(DomainValidationError):
+            self.empleado_service.update_empleado(empleado.id, {"salario": Decimal("-50.00")})
+            
+        # Intentar actualizar con correo vacío
+        with self.assertRaises(DomainValidationError):
+            self.empleado_service.update_empleado(empleado.id, {"correo": ""})
