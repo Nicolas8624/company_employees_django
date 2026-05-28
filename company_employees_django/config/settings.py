@@ -42,6 +42,7 @@ INSTALLED_APPS = [
 
     # Third-party
     'rest_framework',
+    'rest_framework_simplejwt',
 
     # Project apps (Infrastructure — contiene los modelos ORM)
     'infrastructure.database',
@@ -148,6 +149,24 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'infrastructure.security.jwt_authentication.JwtCustomAuthentication',
+    ],
+}
+
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    # No verificar contra modelo User de Django
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
 

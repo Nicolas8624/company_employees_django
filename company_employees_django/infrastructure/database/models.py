@@ -52,3 +52,27 @@ class EmpleadoModel(models.Model):
 
     def __str__(self) -> str:
         return f"{self.nombre} {self.apellido}"
+
+
+class UsuarioModel(models.Model):
+    """Modelo ORM para la tabla de usuarios."""
+
+    correo = models.EmailField(max_length=200, unique=True, verbose_name="Correo electrónico")
+    password_hash = models.CharField(max_length=255, verbose_name="Contraseña Hash")
+    rol = models.CharField(max_length=50, default="USUARIO", verbose_name="Rol")
+    compania = models.ForeignKey(
+        CompaniaModel,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="usuarios",
+        verbose_name="Compañía",
+    )
+
+    class Meta:
+        db_table = "usuarios"
+        verbose_name = "Usuario"
+        verbose_name_plural = "Usuarios"
+
+    def __str__(self) -> str:
+        return self.correo

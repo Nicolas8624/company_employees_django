@@ -10,7 +10,7 @@ import logging
 
 from django.core.management.base import BaseCommand
 
-from infrastructure.database.models import CompaniaModel, EmpleadoModel
+from infrastructure.database.models import CompaniaModel, EmpleadoModel, UsuarioModel
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,9 @@ class Command(BaseCommand):
                 self.style.WARNING("Ya existen datos. Limpiando tablas...")
             )
             EmpleadoModel.objects.all().delete()
+            UsuarioModel.objects.all().delete()
             CompaniaModel.objects.all().delete()
+
 
         # Crear compañías
         companias_data = [
@@ -96,3 +98,34 @@ class Command(BaseCommand):
             )
         )
         logger.info("=== Seed completado exitosamente ===")
+
+        # ============================================================
+        # Crear usuario ADMIN inicial (obligatorio según guía)
+        # ============================================================
+        from django.contrib.auth.hashers import make_password
+
+        admin_correo = "admin@sena.edu.co"
+        if not UsuarioModel.objects.filter(correo=admin_correo).exists():
+            UsuarioModel.objects.create(
+                correo=admin_correo,
+                password_hash=make_password("Admin123!"),
+                rol="ADMIN",
+                compania=None,
+            )
+            self.stdout.write(self.style.SUCCESS(f"  [OK] Usuario ADMIN creado: {admin_correo}"))
+            logger.info("Seed: Usuario ADMIN creado — %s", admin_correo)
+        else:
+            self.stdout.write(self.style.WARNING(f"  [SKIP] Usuario ADMIN ya existe: {admin_correo}"))
+
+        # Crear usuario USUARIO (asociado a TechCorp)
+        usuario_correo = "usuario@techcorp.co"
+        if not UsuarioModel.objects.filter(correo=usuario_correo).exists():
+            UsuarioModel.objects.create(
+                correo=usuario_correo,
+                password_hash=make_password("Usuario123!"),
+                rol="USUARIO",
+                compania=companias[0],
+            )
+            self.stdout.write(self.style.SUCCESS(f"  [OK] Usuario USUARIO creado: {usuario_correo}"))
+            logger.info("Seed: Usuario USUARIO creado — %s", usuario_correo)
+
