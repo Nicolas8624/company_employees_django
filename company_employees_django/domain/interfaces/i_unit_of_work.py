@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 
 from domain.interfaces.i_compania_repository import ICompaniaRepository
 from domain.interfaces.i_empleado_repository import IEmpleadoRepository
+from domain.interfaces.i_usuario_repository import IUsuarioRepository
 
 
 class IUnitOfWork(ABC):
@@ -15,6 +16,7 @@ class IUnitOfWork(ABC):
 
     compania_repository: ICompaniaRepository
     empleado_repository: IEmpleadoRepository
+    usuario_repository: IUsuarioRepository
 
     @abstractmethod
     def __enter__(self) -> "IUnitOfWork":

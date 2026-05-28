@@ -85,3 +85,41 @@ class CompaniaRepository(ICompaniaRepository):
         """Buscar compañías por condición."""
         models = CompaniaModel.objects.filter(**kwargs)
         return [self._to_entity(m) for m in models]
+
+    def patch(self, compania_id: int, data: Dict[str, Any]) -> Optional[Compania]:
+        """Actualizar parcialmente una compañía existente. NO hace commit."""
+        return self.update(compania_id, data)
+
+    def get_paginated(self, page: int, size: int, sort_by: str, sort_dir: str, search: str) -> Dict[str, Any]:
+        """Obtener compañías paginadas con ordenamiento y búsqueda."""
+        from django.db.models import Q
+        import math
+        
+        qs = CompaniaModel.objects.all()
+        
+        if search:
+            qs = qs.filter(
+                Q(nombre__icontains=search) |
+                Q(direccion__icontains=search)
+            )
+            
+        if sort_by:
+            prefix = "-" if sort_dir.lower() == "desc" else ""
+            valid_fields = ["id", "nombre", "fecha_creacion"]
+            if sort_by in valid_fields:
+                qs = qs.order_by(f"{prefix}{sort_by}")
+                
+        total = qs.count()
+        start = (page - 1) * size
+        end = start + size
+        
+        models = qs[start:end]
+        total_paginas = math.ceil(total / size) if size > 0 else 0
+        
+        return {
+            "datos": [self._to_entity(m) for m in models],
+            "pagina": page,
+            "tamano": size,
+            "total": total,
+            "total_paginas": total_paginas
+        }

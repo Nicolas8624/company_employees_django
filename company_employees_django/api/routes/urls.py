@@ -14,9 +14,20 @@ from api.controllers.compania_controller import (
 from api.controllers.empleado_controller import (
     EmpleadoDetailController,
     EmpleadoListController,
+    EmpleadoBulkController,
+)
+from api.controllers.auth_controller import (
+    RegistroController,
+    LoginController,
+    PerfilController,
 )
 
 urlpatterns = [
+    # === Auth ===
+    path("auth/registro", RegistroController.as_view(), name="auth-registro"),
+    path("auth/login", LoginController.as_view(), name="auth-login"),
+    path("auth/perfil", PerfilController.as_view(), name="auth-perfil"),
+
     # === Compañías ===
     # GET/POST /api/companias
     path("companias", CompaniaListController.as_view(), name="compania-list"),
@@ -38,6 +49,9 @@ urlpatterns = [
     # === Empleados ===
     # GET/POST /api/empleados
     path("empleados", EmpleadoListController.as_view(), name="empleado-list"),
-    # GET/PUT/DELETE /api/empleados/{id}
+    # POST/DELETE /api/empleados/bulk
+    path("empleados/bulk", EmpleadoBulkController.as_view(), name="empleado-bulk"),
+    path("empleados/bulk-delete", EmpleadoBulkController.as_view(), name="empleado-bulk-delete"),
+    # GET/PUT/PATCH/DELETE /api/empleados/{id}
     path("empleados/<int:pk>", EmpleadoDetailController.as_view(), name="empleado-detail"),
 ]

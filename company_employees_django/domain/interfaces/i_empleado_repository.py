@@ -47,3 +47,23 @@ class IEmpleadoRepository(ABC):
     def get_by_compania(self, compania_id: int) -> List[Empleado]:
         """Obtener todos los empleados de una compañía."""
         pass
+
+    @abstractmethod
+    def bulk_create(self, empleados: List[Empleado]) -> List[Empleado]:
+        """Crear múltiples empleados. NO hace commit."""
+        pass
+
+    @abstractmethod
+    def patch(self, empleado_id: int, data: Dict[str, Any]) -> Optional[Empleado]:
+        """Actualizar parcialmente un empleado existente. NO hace commit."""
+        pass
+
+    @abstractmethod
+    def delete_many(self, ids: List[int]) -> int:
+        """Eliminar múltiples empleados. NO hace commit."""
+        pass
+
+    @abstractmethod
+    def get_paginated(self, page: int, size: int, sort_by: str, sort_dir: str, search: str) -> Dict[str, Any]:
+        """Obtener empleados paginados con ordenamiento y búsqueda."""
+        pass

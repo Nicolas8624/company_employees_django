@@ -144,6 +144,18 @@ class CompaniaService:
 
                 # Crear y validar los empleados
                 empleados_creados: List[Empleado] = []
+                
+                # Pre-validar todos los correos para evitar fallas a mitad
+                correos_empleados = [emp_data["correo"] for emp_data in data.get("empleados", [])]
+                if len(correos_empleados) != len(set(correos_empleados)):
+                    from domain.exceptions import DomainValidationError
+                    raise DomainValidationError("Error de validacion", errores=[{"campo": "correo", "detalle": "Hay correos duplicados en la lista enviada."}])
+                
+                for correo in correos_empleados:
+                    if self._uow.empleado_repository.find_by_condition(correo=correo):
+                        from domain.exceptions import DomainValidationError
+                        raise DomainValidationError("Error de validacion", errores=[{"campo": "correo", "detalle": f"El correo {correo} ya está registrado."}])
+
                 for emp_data in data.get("empleados", []):
                     empleado = Empleado(
                         nombre=emp_data["nombre"],
@@ -175,3 +187,33 @@ class CompaniaService:
                 # Rollback automático por transaction.atomic
                 logger.error("=== ROLLBACK: Error en transacción — %s ===", str(e))
                 raise
+
+    def patch_compania(self, compania_id: int, data: Dict[str, Any]) -> Optional[Compania]:
+        """Actualización parcial de una compañía."""
+        logger.info("Patching compañía con ID: %s", compania_id)
+        with self._uow:
+            existing = self._uow.compania_repository.get_by_id(compania_id)
+            if not existing:
+                return None
+            
+            # Apply partial updates
+            if "nombre" in data: existing.nombre = data["nombre"]
+            if "direccion" in data: existing.direccion = data["direccion"]
+            if "telefono" in data: existing.telefono = data["telefono"]
+            
+            existing.__post_init__()
+            existing.validar()
+            
+            updated = self._uow.compania_repository.patch(compania_id, data)
+            self._uow.commit()
+            return updated
+
+    def get_paginated_companias(
+        self, page: int = 1, size: int = 10, sort_by: str = "", sort_dir: str = "asc", search: str = ""
+    ) -> Dict[str, Any]:
+        """Obtener lista paginada de compañías."""
+        logger.info("Obteniendo compañías paginadas: page=%s, size=%s", page, size)
+        with self._uow:
+            return self._uow.compania_repository.get_paginated(
+                page=page, size=size, sort_by=sort_by, sort_dir=sort_dir, search=search
+            )

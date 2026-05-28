@@ -42,3 +42,13 @@ class ICompaniaRepository(ABC):
     def find_by_condition(self, **kwargs: Any) -> List[Compania]:
         """Buscar compañías por condición."""
         pass
+
+    @abstractmethod
+    def patch(self, compania_id: int, data: Dict[str, Any]) -> Optional[Compania]:
+        """Actualizar parcialmente una compañía existente. NO hace commit."""
+        pass
+
+    @abstractmethod
+    def get_paginated(self, page: int, size: int, sort_by: str, sort_dir: str, search: str) -> Dict[str, Any]:
+        """Obtener compañías paginadas con ordenamiento y búsqueda."""
+        pass

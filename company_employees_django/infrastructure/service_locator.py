@@ -15,6 +15,7 @@ import logging
 
 from application.services.compania_service import CompaniaService
 from application.services.empleado_service import EmpleadoService
+from application.services.auth_service import AuthService
 from domain.interfaces.i_unit_of_work import IUnitOfWork
 from infrastructure.unit_of_work.unit_of_work import UnitOfWork
 
@@ -63,3 +64,16 @@ class ServiceLocator:
         """
         uow = ServiceLocator.get_unit_of_work()
         return EmpleadoService(unit_of_work=uow)
+
+    @staticmethod
+    def get_auth_service() -> AuthService:
+        """
+        Obtener una instancia del servicio de autenticación.
+        """
+        from infrastructure.security.password_hasher import DjangoPasswordHasher
+        from infrastructure.security.token_service import JwtTokenService
+        
+        uow = ServiceLocator.get_unit_of_work()
+        hasher = DjangoPasswordHasher()
+        token_service = JwtTokenService()
+        return AuthService(unit_of_work=uow, password_hasher=hasher, token_service=token_service)

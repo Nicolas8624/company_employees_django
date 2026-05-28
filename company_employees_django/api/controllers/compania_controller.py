@@ -20,11 +20,17 @@ from rest_framework.views import APIView
 from api.serializers.compania_serializer import (
     CompaniaCreateSerializer,
     CompaniaSerializer,
+    CompaniaPatchSerializer,
 )
 from api.serializers.compania_con_empleados_serializer import (
     CompaniaConEmpleadosSerializer,
 )
 from api.serializers.empleado_serializer import EmpleadoSerializer
+from api.permissions.permissions import (
+    IsAdmin,
+    IsAdminOrUsuario,
+    IsAuthenticatedUser,
+)
 from domain.exceptions import DomainValidationError
 from infrastructure.service_locator import ServiceLocator
 
@@ -33,19 +39,35 @@ logger = logging.getLogger(__name__)
 
 class CompaniaListController(APIView):
     """
-    GET /api/companias     → Listar todas las compañías
-    POST /api/companias    → Crear nueva compañía
+    GET /api/companias     → Listar compañías [autenticado]
+    POST /api/companias    → Crear compañía [ADMIN o USUARIO]
     """
 
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [IsAuthenticatedUser()]
+        return [IsAdminOrUsuario()]
+
     def get(self, request: Request) -> Response:
-        """Listar todas las compañías."""
+        """Listar todas las compañías (con paginación)."""
         logger.info("GET /api/companias")
         service = ServiceLocator.get_compania_service()
-        companias = service.get_all_companias()
-        serializer = CompaniaSerializer(
-            [asdict(c) for c in companias], many=True
+        
+        page = int(request.query_params.get("pagina", 1))
+        size = int(request.query_params.get("tamano", 10))
+        sort_by = request.query_params.get("orden", "")
+        sort_dir = request.query_params.get("dir", "asc")
+        search = request.query_params.get("buscar", "")
+        
+        paginated = service.get_paginated_companias(
+            page=page, size=size, sort_by=sort_by, sort_dir=sort_dir, search=search
         )
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        serializer = CompaniaSerializer(
+            [asdict(c) for c in paginated["datos"]], many=True
+        )
+        paginated["datos"] = serializer.data
+        return Response(paginated, status=status.HTTP_200_OK)
 
     def post(self, request: Request) -> Response:
         """Crear una nueva compañía."""
@@ -65,16 +87,24 @@ class CompaniaListController(APIView):
         except DomainValidationError as e:
             logger.warning("Validación de dominio fallida: %s", e.mensaje)
             return Response(
-                {"error": e.mensaje}, status=status.HTTP_400_BAD_REQUEST
+                {"mensaje": e.mensaje, "errores": getattr(e, 'errores', [])}, status=status.HTTP_400_BAD_REQUEST
             )
 
 
 class CompaniaDetailController(APIView):
     """
-    GET /api/companias/{id}     → Obtener compañía por ID
-    PUT /api/companias/{id}     → Actualizar compañía
-    DELETE /api/companias/{id}  → Eliminar compañía
+    GET    /api/companias/{id}  → Obtener compañía [autenticado]
+    PUT    /api/companias/{id}  → Actualizar [ADMIN o USUARIO]
+    PATCH  /api/companias/{id}  → Patch parcial [ADMIN o USUARIO]
+    DELETE /api/companias/{id}  → Eliminar [solo ADMIN]
     """
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [IsAuthenticatedUser()]
+        if self.request.method == 'DELETE':
+            return [IsAdmin()]
+        return [IsAdminOrUsuario()]
 
     def get(self, request: Request, pk: int) -> Response:
         """Obtener una compañía por su ID."""
@@ -110,7 +140,31 @@ class CompaniaDetailController(APIView):
         except DomainValidationError as e:
             logger.warning("Validación de dominio fallida: %s", e.mensaje)
             return Response(
-                {"error": e.mensaje}, status=status.HTTP_400_BAD_REQUEST
+                {"mensaje": e.mensaje, "errores": getattr(e, 'errores', [])}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+    def patch(self, request: Request, pk: int) -> Response:
+        """Actualizar parcialmente una compañía."""
+        logger.info("PATCH /api/companias/%s", pk)
+        serializer = CompaniaPatchSerializer(data=request.data)
+        if not serializer.is_valid():
+            logger.warning("Datos inválidos: %s", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            service = ServiceLocator.get_compania_service()
+            compania = service.patch_compania(pk, serializer.validated_data)
+            if compania is None:
+                return Response(
+                    {"error": "Compañía no encontrada"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            response_serializer = CompaniaSerializer(asdict(compania))
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
+        except DomainValidationError as e:
+            logger.warning("Validación de dominio fallida: %s", e.mensaje)
+            return Response(
+                {"mensaje": e.mensaje, "errores": getattr(e, 'errores', [])}, status=status.HTTP_400_BAD_REQUEST
             )
 
     def delete(self, request: Request, pk: int) -> Response:
@@ -149,12 +203,10 @@ class CompaniaEmpleadosController(APIView):
 
 class CompaniaConEmpleadosController(APIView):
     """
-    POST /api/companias/con-empleados → Crear compañía + empleados transaccional
-
-    Endpoint transaccional obligatorio:
-    - Crea una compañía y múltiples empleados en una sola transacción
-    - Si falla cualquier operación, hace rollback completo
+    POST /api/companias/con-empleados → Crear compañía + empleados [solo ADMIN]
     """
+
+    permission_classes = [IsAdmin]
 
     def post(self, request: Request) -> Response:
         """Crear compañía con empleados en una sola transacción."""
@@ -180,7 +232,7 @@ class CompaniaConEmpleadosController(APIView):
         except DomainValidationError as e:
             logger.warning("Validación de dominio fallida: %s", e.mensaje)
             return Response(
-                {"error": e.mensaje}, status=status.HTTP_400_BAD_REQUEST
+                {"mensaje": e.mensaje, "errores": getattr(e, 'errores', [])}, status=status.HTTP_400_BAD_REQUEST
             )
         except Exception as e:
             logger.error("Error en transacción: %s", str(e))

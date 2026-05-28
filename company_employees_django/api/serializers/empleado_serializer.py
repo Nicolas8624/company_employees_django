@@ -20,7 +20,7 @@ class EmpleadoSerializer(serializers.Serializer):
 
 
 class EmpleadoCreateSerializer(serializers.Serializer):
-    """Serializer para creación/actualización de empleado."""
+    """Serializer para creación de empleado."""
 
     nombre = serializers.CharField(max_length=100, required=True)
     apellido = serializers.CharField(max_length=100, required=True)
@@ -30,3 +30,28 @@ class EmpleadoCreateSerializer(serializers.Serializer):
         max_digits=12, decimal_places=2, required=True
     )
     compania_id = serializers.IntegerField(required=True)
+
+
+class EmpleadoPatchSerializer(serializers.Serializer):
+    """Serializer para actualización parcial de empleado."""
+
+    nombre = serializers.CharField(max_length=100, required=False)
+    apellido = serializers.CharField(max_length=100, required=False)
+    correo = serializers.EmailField(max_length=200, required=False)
+    cargo = serializers.CharField(max_length=150, required=False)
+    salario = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=False
+    )
+    compania_id = serializers.IntegerField(required=False)
+
+
+class EmpleadoBulkCreateSerializer(serializers.Serializer):
+    """Serializer para creación masiva."""
+    empleados = EmpleadoCreateSerializer(many=True)
+
+
+class BulkDeleteSerializer(serializers.Serializer):
+    """Serializer para eliminación masiva."""
+    ids = serializers.ListField(
+        child=serializers.IntegerField(), allow_empty=False
+    )

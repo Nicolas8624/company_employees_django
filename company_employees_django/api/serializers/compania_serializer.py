@@ -18,8 +18,16 @@ class CompaniaSerializer(serializers.Serializer):
 
 
 class CompaniaCreateSerializer(serializers.Serializer):
-    """Serializer para creación/actualización de compañía."""
+    """Serializer para creación de compañía."""
 
     nombre = serializers.CharField(max_length=200, required=True)
     direccion = serializers.CharField(max_length=300, required=True)
     telefono = serializers.CharField(max_length=50, required=True)
+
+
+class CompaniaPatchSerializer(serializers.Serializer):
+    """Serializer para actualización parcial de compañía."""
+
+    nombre = serializers.CharField(max_length=200, required=False)
+    direccion = serializers.CharField(max_length=300, required=False)
+    telefono = serializers.CharField(max_length=50, required=False)

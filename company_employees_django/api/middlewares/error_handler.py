@@ -24,6 +24,24 @@ class ErrorHandlerMiddleware:
 
     def process_exception(self, request, exception):
         """Capturar excepciones no manejadas."""
+        from domain.exceptions import DomainValidationError, EntityNotFoundError, ForbiddenError
+
+        if isinstance(exception, DomainValidationError):
+            logger.warning("Error de validación: %s", exception.mensaje)
+            return JsonResponse(
+                {
+                    "mensaje": "Error de validacion",
+                    "errores": exception.errores if exception.errores else [{"campo": "general", "detalle": exception.mensaje}]
+                },
+                status=400,
+            )
+
+        if isinstance(exception, EntityNotFoundError):
+            return JsonResponse({"error": str(exception)}, status=404)
+
+        if isinstance(exception, ForbiddenError):
+            return JsonResponse({"error": str(exception)}, status=403)
+
         logger.error(
             "Error inesperado en %s %s: %s",
             request.method,

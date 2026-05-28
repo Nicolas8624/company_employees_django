@@ -97,3 +97,67 @@ class EmpleadoRepository(IEmpleadoRepository):
         """Obtener todos los empleados de una compañía."""
         models = EmpleadoModel.objects.filter(compania_id=compania_id)
         return [self._to_entity(m) for m in models]
+
+    def bulk_create(self, empleados: List[Empleado]) -> List[Empleado]:
+        """Crear múltiples empleados. NO hace commit."""
+        models = [
+            EmpleadoModel(
+                nombre=e.nombre,
+                apellido=e.apellido,
+                correo=e.correo,
+                cargo=e.cargo,
+                salario=e.salario,
+                compania_id=e.compania_id
+            ) for e in empleados
+        ]
+        created_models = EmpleadoModel.objects.bulk_create(models)
+        logger.debug("Repository: %s Empleados insertados en bulk (sin commit explícito)", len(created_models))
+        # Si la base de datos no devuelve PKs en bulk_create (como SQLite antiguo), 
+        # las entidades devueltas podrían no tener ID.
+        return [self._to_entity(m) for m in created_models]
+
+    def patch(self, empleado_id: int, data: Dict[str, Any]) -> Optional[Empleado]:
+        """Actualizar parcialmente un empleado existente. NO hace commit."""
+        return self.update(empleado_id, data)
+
+    def delete_many(self, ids: List[int]) -> int:
+        """Eliminar múltiples empleados. NO hace commit."""
+        count, _ = EmpleadoModel.objects.filter(pk__in=ids).delete()
+        logger.debug("Repository: %s Empleados eliminados en bulk (sin commit explícito)", count)
+        return count
+
+    def get_paginated(self, page: int, size: int, sort_by: str, sort_dir: str, search: str) -> Dict[str, Any]:
+        """Obtener empleados paginados con ordenamiento y búsqueda."""
+        from django.db.models import Q
+        import math
+        
+        qs = EmpleadoModel.objects.all()
+        
+        if search:
+            qs = qs.filter(
+                Q(nombre__icontains=search) |
+                Q(apellido__icontains=search) |
+                Q(correo__icontains=search) |
+                Q(cargo__icontains=search)
+            )
+            
+        if sort_by:
+            prefix = "-" if sort_dir.lower() == "desc" else ""
+            valid_fields = ["id", "nombre", "apellido", "correo", "cargo", "salario"]
+            if sort_by in valid_fields:
+                qs = qs.order_by(f"{prefix}{sort_by}")
+                
+        total = qs.count()
+        start = (page - 1) * size
+        end = start + size
+        
+        models = qs[start:end]
+        total_paginas = math.ceil(total / size) if size > 0 else 0
+        
+        return {
+            "datos": [self._to_entity(m) for m in models],
+            "pagina": page,
+            "tamano": size,
+            "total": total,
+            "total_paginas": total_paginas
+        }

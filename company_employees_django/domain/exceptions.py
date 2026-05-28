@@ -22,14 +22,16 @@ class DomainValidationError(DomainException):
     Se lanza cuando una entidad de dominio no cumple
     con sus invariantes o reglas de negocio.
     """
-    pass
+    def __init__(self, mensaje: str, errores: list = None):
+        super().__init__(mensaje)
+        self.errores = errores or []
 
 
 class EntityNotFoundError(DomainException):
-    """
-    Error cuando una entidad no se encuentra.
+    """Error cuando una entidad no se encuentra."""
+    pass
 
-    Se lanza cuando se busca una entidad por ID
-    y no existe en el repositorio.
-    """
+
+class ForbiddenError(DomainException):
+    """Error cuando una acción no está permitida por políticas."""
     pass

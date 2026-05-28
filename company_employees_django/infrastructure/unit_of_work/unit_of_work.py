@@ -16,6 +16,7 @@ from django.db import transaction
 from domain.interfaces.i_unit_of_work import IUnitOfWork
 from infrastructure.repositories.compania_repository import CompaniaRepository
 from infrastructure.repositories.empleado_repository import EmpleadoRepository
+from infrastructure.repositories.usuario_repository import UsuarioRepository
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class UnitOfWork(IUnitOfWork):
         with UnitOfWork() as uow:
             uow.compania_repository.create(...)
             uow.empleado_repository.create(...)
+            uow.usuario_repository.create(...)
             uow.commit()
         # Si ocurre una excepción, rollback automático
 
@@ -39,6 +41,7 @@ class UnitOfWork(IUnitOfWork):
     def __init__(self) -> None:
         self._compania_repository = CompaniaRepository()
         self._empleado_repository = EmpleadoRepository()
+        self._usuario_repository = UsuarioRepository()
         self._atomic = None
         self._committed: bool = False
 
@@ -51,6 +54,11 @@ class UnitOfWork(IUnitOfWork):
     def empleado_repository(self) -> EmpleadoRepository:
         """Acceso al repositorio de empleados."""
         return self._empleado_repository
+
+    @property
+    def usuario_repository(self) -> UsuarioRepository:
+        """Acceso al repositorio de usuarios."""
+        return self._usuario_repository
 
     def __enter__(self) -> "UnitOfWork":
         """Iniciar la transacción con transaction.atomic."""
