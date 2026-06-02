@@ -192,3 +192,69 @@ class EsPropietarioDeCompaniaTests(TestCase):
             {"cargo": "Hacker"}, format="json"
         )
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class PoliticaAdminCiudadTests(TestCase):
+    """Política por claim ciudad: Medellín CRUD completo, Bogotá sin DELETE."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.compania = CompaniaModel.objects.create(
+            nombre="Cia Ciudad", direccion="Dir", telefono="000"
+        )
+        self.empleado = EmpleadoModel.objects.create(
+            nombre="Emp", apellido="Ciudad", correo="emp@ciudad.com",
+            cargo="Dev", salario=1000, compania=self.compania,
+        )
+        UsuarioModel.objects.create(
+            correo="admin.med@ciudad.com",
+            password_hash=make_password("Admin123!"),
+            rol="ADMIN",
+            ciudad="Medellín",
+        )
+        UsuarioModel.objects.create(
+            correo="admin.bog@ciudad.com",
+            password_hash=make_password("Admin123!"),
+            rol="ADMIN",
+            ciudad="Bogotá",
+        )
+
+    def _auth(self, correo):
+        token = _get_token(self.client, correo, "Admin123!")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+    def test_admin_medellin_puede_eliminar(self):
+        self._auth("admin.med@ciudad.com")
+        resp = self.client.delete(f"/api/empleados/{self.empleado.pk}")
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_admin_bogota_no_puede_eliminar(self):
+        self._auth("admin.bog@ciudad.com")
+        resp = self.client.delete(f"/api/empleados/{self.empleado.pk}")
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_bogota_puede_crear_empleado(self):
+        self._auth("admin.bog@ciudad.com")
+        resp = self.client.post(
+            "/api/empleados",
+            {
+                "nombre": "Nuevo",
+                "apellido": "Bog",
+                "correo": "nuevo@bog.com",
+                "cargo": "Dev",
+                "salario": "2000",
+                "compania_id": self.compania.pk,
+            },
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+    def test_login_incluye_ciudad_en_respuesta(self):
+        resp = self.client.post(
+            "/api/auth/login",
+            {"correo": "admin.bog@ciudad.com", "password": "Admin123!"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data["usuario"]["ciudad"], "Bogotá")
+        self.assertIn("token", resp.data)

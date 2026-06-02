@@ -107,3 +107,71 @@ class ValidationTests(TestCase):
         
         self.assertEqual(CompaniaModel.objects.count(), compania_count_before)
         self.assertEqual(EmpleadoModel.objects.count(), empleado_count_before)
+
+    def test_admin_medellin_has_full_crud(self):
+        """Prueba de que un administrador de Medellín posee acceso completo (POST)."""
+        admin_med = UsuarioModel.objects.create(
+            correo="admin_med@test.com",
+            password_hash=make_password("Pass123!"),
+            rol="ADMIN",
+            ciudad="Medellín"
+        )
+        # Iniciar sesión
+        resp = self.client.post("/api/auth/login", {"correo": "admin_med@test.com", "password": "Pass123!"}, format="json")
+        token = resp.data.get("token")
+        
+        client_med = APIClient()
+        client_med.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        
+        # Intentar POST de Compañía
+        url = "/api/companias"
+        data = {
+            "nombre": "TechCorp Medellín",
+            "direccion": "Calle 10",
+            "telefono": "12345"
+        }
+        response = client_med.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_admin_bogota_restricted_delete_only(self):
+        """Un administrador de Bogotá puede crear y actualizar, pero no eliminar."""
+        UsuarioModel.objects.create(
+            correo="admin_bog@test.com",
+            password_hash=make_password("Pass123!"),
+            rol="ADMIN",
+            ciudad="Bogotá",
+        )
+        resp = self.client.post(
+            "/api/auth/login",
+            {"correo": "admin_bog@test.com", "password": "Pass123!"},
+            format="json",
+        )
+        token = resp.data.get("token")
+
+        client_bog = APIClient()
+        client_bog.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        url = "/api/companias"
+        data = {
+            "nombre": "TechCorp Bogotá",
+            "direccion": "Calle 80",
+            "telefono": "54321",
+        }
+        response = client_bog.post(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        url_detail = f"/api/companias/{self.compania.pk}"
+        response_put = client_bog.put(url_detail, data, format="json")
+        self.assertEqual(response_put.status_code, status.HTTP_200_OK)
+
+        data_patch = {"telefono": "999-9999"}
+        response_patch = client_bog.patch(url_detail, data_patch, format="json")
+        self.assertEqual(response_patch.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_patch.data["telefono"], "999-9999")
+
+        response_delete = client_bog.delete(url_detail)
+        self.assertEqual(response_delete.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn(
+            "los administradores de Bogotá no pueden eliminar",
+            response_delete.data["detail"],
+        )
