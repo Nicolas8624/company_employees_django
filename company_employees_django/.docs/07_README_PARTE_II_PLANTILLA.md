@@ -115,10 +115,11 @@ GET /api/auth/perfil
 
 El login devuelve un token JWT con claims:
 
-- id de usuario.
+- id de usuario (`user_id`).
 - correo.
 - rol.
-- compania_id.
+- ciudad.
+- compania_id (opcional).
 - expiracion.
 
 ### Autorizacion por roles
@@ -137,16 +138,17 @@ Reglas:
 
 ### Autorizacion por politicas
 
-Politica implementada:
+Politicas implementadas:
 
 ```text
 EsPropietarioDeCompania
+PoliticaAdminCiudad
 ```
 
-Regla:
+Reglas:
 
-- ADMIN puede todo.
-- USUARIO solo puede editar/eliminar empleados de su propia compania.
+- **EsPropietarioDeCompania:** ADMIN sin restriccion; USUARIO solo edita empleados de su `compania_id`.
+- **PoliticaAdminCiudad:** ADMIN de Medellin = CRUD completo; ADMIN de Bogota = sin DELETE (403).
 
 ## Variables de entorno
 

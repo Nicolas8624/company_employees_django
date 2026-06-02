@@ -26,6 +26,7 @@ Archivos recomendados para usar en Antigravity:
 6. `06_CHECKLIST_ENTREGA.md`
 7. `07_README_PARTE_II_PLANTILLA.md`
 8. `08_PREGUNTAS_SUSTENTACION.md`
+9. `GUIA_AUTH_JWT.md` — login, JWT, roles, politicas Medellin/Bogota (documentacion de entrega)
 
 Forma sugerida de uso:
 

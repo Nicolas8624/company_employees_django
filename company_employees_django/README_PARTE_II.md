@@ -99,38 +99,210 @@ Se implementó `ErrorHandlerMiddleware` en `api/middlewares/error_handler.py`. C
 
 ## 4. Seguridad JWT, Roles y Políticas (Módulos 4 & 5)
 
-Se implementó un esquema de seguridad robusto basado en **JSON Web Tokens (JWT)**. Para no acoplar el Dominio con dependencias web como `djangorestframework-simplejwt`, se desarrolló un diseño desacoplado:
+Se implementó autenticación con **JSON Web Tokens (JWT)**, autorización por **roles** (`ADMIN` / `USUARIO`) y dos **políticas** basadas en claims del token: propiedad de compañía y ciudad del administrador.
+
+### 4.1 Flujo técnico (Onion Architecture)
 
 ```
-[Cliente HTTP] --> Envía JWT Bearer Token
-        |
-        v
-[JwtCustomAuthentication] (Infrastructure)
-        |---> Valida firma e integridad del token (usa SimpleJWT tras bambalinas)
-        |---> Extrae claims del payload (id, correo, rol, compania_id)
-        |---> Instancia objeto de dominio UsuarioAutenticado (POPO)
-        |---> Inyecta objeto en request.user
-        v
-[Permisos por Rol / Políticas] (Capa API)
-        |---> Verifica request.user.rol (ADMIN o USUARIO)
-        |---> Verifica request.user.compania_id contra el objeto modificado
+[Cliente HTTP]
+    |  Authorization: Bearer <JWT>
+    v
+[JwtCustomAuthentication]          ← infrastructure/security/jwt_authentication.py
+    |  Valida firma (djangorestframework-simplejwt)
+    |  Lee claims: user_id, correo, rol, ciudad, compania_id
+    |  Crea UsuarioAutenticado → request.user
+    v
+[Permission classes]               ← api/permissions/permissions.py
+    |  Rol: IsAdmin, IsAdminOrUsuario, IsAuthenticatedUser
+    |  Políticas: EsPropietarioDeCompania, PoliticaAdminCiudad
+    v
+[Controller] → [Service] → [UnitOfWork] → [Repository] → ORM
 ```
 
-### Endpoints de Autenticación
-*   `POST /api/auth/registro`: Permite registrar nuevos usuarios (roles `ADMIN` o `USUARIO`).
-*   `POST /api/auth/login`: Valida credenciales contra la base de datos (con contraseñas hasheadas de forma segura) y retorna un Token JWT conteniendo claims personalizados.
-*   `GET /api/auth/perfil`: Retorna la información del usuario en sesión extraída directamente de los claims del JWT validado.
+| Capa | Archivos principales | Responsabilidad |
+|------|----------------------|-----------------|
+| **Domain** | `domain/entities/usuario.py`, `domain/interfaces/i_token_service.py` | Entidad `Usuario`, contratos sin dependencias web |
+| **Application** | `application/services/auth_service.py` | Registro, login, validación de credenciales |
+| **Infrastructure** | `infrastructure/security/token_service.py`, `jwt_authentication.py`, `password_hasher.py`, `infrastructure/repositories/usuario_repository.py` | JWT, hash de contraseñas, persistencia |
+| **API** | `api/controllers/auth_controller.py`, `api/permissions/permissions.py` | Endpoints HTTP y reglas de acceso |
 
-### Autorización por Roles
-*   `GET`: Cualquier usuario autenticado (`IsAuthenticatedUser`).
-*   `POST/PUT/PATCH`: Administradores o Usuarios de compañía (`IsAdminOrUsuario`).
-*   `DELETE`: Exclusivo para administradores (`IsAdmin`).
-*   `POST /api/companias/con-empleados`: Exclusivo para administradores (`IsAdmin`).
+### 4.2 Endpoints de autenticación
 
-### Autorización por Políticas (Módulo 5)
-Se implementó la política `EsPropietarioDeCompania` para restringir la modificación de empleados.
-*   **Regra:** Si el usuario autenticado tiene el rol `USUARIO`, solo puede modificar (`PATCH`, `PUT`) o eliminar empleados que pertenezcan a su **misma compañía** (`compania_id`). Un usuario de la Compañía A no puede modificar a empleados de la Compañía B.
-*   **ADMIN:** Tiene superpoderes y pasa esta validación sin importar a qué compañía pertenezca.
+| Método | Ruta | Acceso | Descripción |
+|--------|------|--------|-------------|
+| `POST` | `/api/auth/registro` | Público | Crea usuario y devuelve token |
+| `POST` | `/api/auth/login` | Público | Valida credenciales y devuelve token |
+| `GET` | `/api/auth/perfil` | Autenticado | Devuelve datos del usuario desde el JWT |
+
+#### Login (ejemplo)
+
+**Request:**
+
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "correo": "admin_bogota@sena.edu.co",
+  "password": "Admin123!"
+}
+```
+
+**Response (200):**
+
+```json
+{
+  "usuario": {
+    "id": 3,
+    "correo": "admin_bogota@sena.edu.co",
+    "rol": "ADMIN",
+    "ciudad": "Bogotá",
+    "compania_id": null
+  },
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Uso del token en peticiones protegidas:**
+
+```http
+GET /api/empleados
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+#### Registro (ejemplo ADMIN con ciudad)
+
+```json
+{
+  "correo": "nuevo.admin@empresa.com",
+  "password": "Pass123!",
+  "rol": "ADMIN",
+  "ciudad": "Medellín"
+}
+```
+
+Para rol `USUARIO` es obligatorio enviar `compania_id`.
+
+### 4.3 Claims del JWT
+
+Al iniciar sesión, `JwtTokenService` incluye en el access token:
+
+| Claim | Descripción |
+|-------|-------------|
+| `user_id` | ID del usuario en base de datos |
+| `correo` | Correo electrónico |
+| `rol` | `ADMIN` o `USUARIO` |
+| `ciudad` | Ciudad del usuario (política de administrador) |
+| `compania_id` | ID de compañía (solo si aplica) |
+| `exp` | Expiración (configurada en `SIMPLE_JWT` en `config/settings.py`) |
+
+El backend `JwtCustomAuthentication` mapea esos claims a `request.user` (`UsuarioAutenticado`) sin usar `django.contrib.auth.User`.
+
+### 4.4 Autorización por roles
+
+| Operación HTTP | Endpoints típicos | Permiso |
+|----------------|-------------------|---------|
+| `GET` (listar / detalle) | `/api/companias`, `/api/empleados`, … | `IsAuthenticatedUser` |
+| `POST`, `PUT`, `PATCH` | Crear / actualizar recursos | `IsAdminOrUsuario` |
+| `DELETE` | Eliminar recurso o bulk-delete | `IsAdmin` |
+| `POST` transaccional | `/api/companias/con-empleados` | `IsAdmin` |
+
+**Reglas por rol:**
+
+- **`ADMIN`:** Puede crear, leer, actualizar y (según ciudad) eliminar.
+- **`USUARIO`:** Puede leer todo lo autenticado; puede crear/actualizar empleados con restricción de compañía; **no** puede `DELETE` ni usar el endpoint transaccional de compañía con empleados.
+
+### 4.5 Políticas (Módulo 5)
+
+Las políticas se combinan con los permisos de rol en los controllers (`get_permissions()`).
+
+#### Política 1: `EsPropietarioDeCompania`
+
+**Archivo:** `api/permissions/permissions.py`
+
+| Rol | Comportamiento |
+|-----|----------------|
+| `ADMIN` | Sin restricción por compañía |
+| `USUARIO` | Solo `PUT` / `PATCH` sobre empleados cuyo `compania_id` coincide con el del token |
+
+Se valida en `has_object_permission()` comparando `request.user.compania_id` con `empleado.compania_id`.
+
+#### Política 2: `PoliticaAdminCiudad` (claims + ciudad)
+
+**Requisito de negocio:** el claim `ciudad` del JWT define qué puede hacer un **ADMIN**.
+
+| Ciudad (claim) | Permisos del ADMIN |
+|----------------|-------------------|
+| **Medellín** | CRUD completo: `GET`, `POST`, `PUT`, `PATCH`, `DELETE` |
+| **Bogotá** | Todo **excepto eliminar**: `GET`, `POST`, `PUT`, `PATCH` — `DELETE` → **403 Forbidden** |
+
+La comparación de ciudad **ignora tildes y mayúsculas** (`Bogotá`, `bogota`, `BOGOTA` se tratan igual).
+
+**Mensaje de error (403):**
+
+```text
+Acceso restringido: los administradores de Bogotá no pueden eliminar recursos (operación DELETE no permitida).
+```
+
+**Endpoints donde aplica `PoliticaAdminCiudad`:**
+
+- `DELETE` en `/api/companias/{id}` y `/api/empleados/{id}`
+- `DELETE` en `/api/empleados/bulk-delete`
+- Cualquier ruta que use `PoliticaAdminCiudad` junto con permisos de escritura (la política solo bloquea `DELETE` para ADMIN de Bogotá)
+
+### 4.6 Matriz resumida de acceso
+
+| Usuario | GET | POST / PUT / PATCH | DELETE |
+|---------|-----|-------------------|--------|
+| Sin token | 401 | 401 | 401 |
+| USUARIO (propia compañía en empleados) | Sí | Sí (empleados de su compañía) | No |
+| USUARIO (otra compañía) | Sí | No (403) en empleados ajenos | No |
+| ADMIN Medellín | Sí | Sí | Sí |
+| ADMIN Bogotá | Sí | Sí | **No (403)** |
+
+### 4.7 Usuarios de prueba (seed)
+
+Ejecutar:
+
+```powershell
+py manage.py migrate
+py manage.py seed
+```
+
+| Correo | Contraseña | Rol | Ciudad | Notas |
+|--------|------------|-----|--------|-------|
+| `admin_medellin@sena.edu.co` | `Admin123!` | ADMIN | Medellín | CRUD completo |
+| `admin_bogota@sena.edu.co` | `Admin123!` | ADMIN | Bogotá | Sin DELETE |
+| `admin@sena.edu.co` | `Admin123!` | ADMIN | Medellín | Compatibilidad tests |
+| `usuario@techcorp.co` | `Usuario123!` | USUARIO | Medellín | Solo empleados de su compañía |
+
+### 4.8 Interfaz web de demostración
+
+Ruta raíz: `http://127.0.0.1:8000/` (`templates/index.html`)
+
+- Acceso rápido con las cuentas del seed.
+- Muestra rol, ciudad y política activa.
+- Deshabilita botones de eliminar para ADMIN Bogotá (coherente con la API).
+
+### 4.9 Pruebas automatizadas relacionadas
+
+| Archivo | Qué valida |
+|---------|------------|
+| `tests/test_auth_jwt.py` | Registro, login, perfil, roles, `PoliticaAdminCiudad` |
+| `tests/test_validation.py` | `test_admin_medellin_has_full_crud`, `test_admin_bogota_restricted_delete_only` |
+
+```powershell
+py manage.py test tests.test_auth_jwt tests.test_validation
+```
+
+### 4.10 Configuración JWT
+
+En `config/settings.py`:
+
+- `DEFAULT_AUTHENTICATION_CLASSES` → `JwtCustomAuthentication`
+- `SIMPLE_JWT` → tiempo de vida del token, algoritmo `HS256`, `SIGNING_KEY`
+
+La clave de firma debe provenir de entorno en producción (no hardcodear secretos).
 
 ---
 
@@ -178,7 +350,7 @@ A continuación se muestra una tabla de equivalencias técnicas entre **ASP.NET 
 | `xUnit` / `NUnit` + `Moq` | `django.test.TestCase` + `unittest.mock` | TestCase de Django incluye base de datos de pruebas aislada y cliente API. |
 | `AddAuthentication().AddJwtBearer()` | `JwtCustomAuthentication` (DRF settings) | Custom authentication backend registrado en `DEFAULT_AUTHENTICATION_CLASSES`. |
 | `[Authorize(Roles="ADMIN")]` | Permission class `IsAdmin` | Clases de permiso que sobrescriben `has_permission`. |
-| `[Authorize(Policy="...")]` / Handlers | `EsPropietarioDeCompania` | DRF encapsula la lógica de políticas en `has_object_permission`. |
+| `[Authorize(Policy="...")]` / Handlers | `EsPropietarioDeCompania`, `PoliticaAdminCiudad` | Políticas en `has_permission` / `has_object_permission` según el caso. |
 | `ClaimsPrincipal` / `User.Claims` | `request.user` (UsuarioAutenticado) | Inyección de un POPO con propiedades en `request.user` tras validar el JWT. |
 
 ---
@@ -207,11 +379,20 @@ A continuación se muestra una tabla de equivalencias técnicas entre **ASP.NET 
 
 ### Prompt 12 - JWT por políticas
 *   **Pregunta:** ¿Cuál es la diferencia entre autorización por roles y por políticas en Django REST Framework? Implementa una política de propiedad...
-*   **Respuesta de Antigravity:** La autorización por roles valida una propiedad global del usuario (ej. rol = ADMIN). La autorización por políticas valida condiciones relacionales dinámicas sobre los datos (ej. usuario sólo edita empleados de su propia empresa). En DRF esto se resolvió implementando una clase de permiso personalizada `EsPropietarioDeCompania` que evalúa `has_object_permission()` comparando `request.user.compania_id` con `empleado.compania_id`.
+*   **Respuesta:** Los **roles** responden “¿quién eres?” (`ADMIN` vs `USUARIO`). Las **políticas** responden “¿puedes hacer esto sobre este recurso o en estas condiciones?”. Se implementaron dos permission classes en `api/permissions/permissions.py`:
+    1. **`EsPropietarioDeCompania`:** un `USUARIO` solo modifica empleados de su `compania_id` (validación en `has_object_permission`).
+    2. **`PoliticaAdminCiudad`:** usa el claim JWT `ciudad`. Un `ADMIN` de **Medellín** tiene CRUD completo; un `ADMIN` de **Bogotá** puede consultar y escribir (POST/PUT/PATCH) pero no **DELETE** (403).
 
 ---
 
 ## 8. Conclusiones de la Parte II
-1.  **Flexibilidad de Onion Architecture:** La arquitectura demostró ser altamente resistente al cambio. Al implementar JWT, la capa de dominio permaneció intacta, ya que toda la infraestructura de tokens se ubicó detrás de la interfaz `ITokenService`.
-2.  **Seguridad Desacoplada de Django contrib.auth:** Se logró implementar autenticación JWT sin depender del pesado sistema de usuarios nativo de Django, manteniendo el núcleo de negocio limpio y liviano.
-3.  **Transacciones y Seguridad de Datos:** El uso riguroso del patrón Unit of Work garantizó la consistencia e integridad de los datos en todas las operaciones complejas y masivas, protegiendo al negocio de estados corruptos e inconsistencias accidentales en la base de datos.
+1.  **Flexibilidad de Onion Architecture:** Al agregar JWT y políticas, el dominio permaneció estable; tokens y hash viven en Infrastructure detrás de interfaces (`ITokenService`, `IPasswordHasher`).
+2.  **Seguridad desacoplada de `contrib.auth`:** Autenticación propia con `UsuarioAutenticado` y claims personalizados (`rol`, `ciudad`, `compania_id`).
+3.  **Roles + políticas combinadas:** El rol define el techo de permisos; las políticas refinan el acceso (propiedad de compañía y ciudad del administrador).
+4.  **Transacciones:** El Unit of Work mantiene consistencia en operaciones masivas y en `/api/companias/con-empleados`.
+
+---
+
+## Anexo: guía rápida de autenticación
+
+Documentación detallada adicional: [`.docs/GUIA_AUTH_JWT.md`](.docs/GUIA_AUTH_JWT.md)

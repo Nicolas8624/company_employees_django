@@ -134,8 +134,15 @@ Implementar al menos:
 
 Regla:
 
-- Si el usuario es `ADMIN`, puede todo.
-- Si el usuario es `USUARIO`, solo puede actualizar o eliminar empleados cuya `compania_id` coincida con la compania del usuario autenticado.
+- Si el usuario es `ADMIN`, puede todo (respecto a compania).
+- Si el usuario es `USUARIO`, solo puede actualizar empleados cuya `compania_id` coincida con la del token.
+
+`PoliticaAdminCiudad` (claim `ciudad` en JWT):
+
+- ADMIN **Medellin:** CRUD completo.
+- ADMIN **Bogota:** todo excepto DELETE.
+
+Documentacion detallada: `.docs/GUIA_AUTH_JWT.md`
 
 Opcional:
 

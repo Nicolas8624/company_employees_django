@@ -22,7 +22,18 @@ Las validaciones de formato de entrada se pueden hacer con serializers de DRF, p
 
 ## 6. Que es JWT?
 
-JWT es un token firmado que contiene claims sobre el usuario, como id, correo, rol, compania y expiracion. El cliente lo envia en el header `Authorization: Bearer <token>` y la API lo valida en cada peticion.
+JWT es un token firmado que contiene claims sobre el usuario, como id, correo, rol, ciudad, compania_id y expiracion. El cliente lo envia en el header `Authorization: Bearer <token>` y la API lo valida en cada peticion mediante `JwtCustomAuthentication`.
+
+## 6.1. Que claims usa este proyecto?
+
+- `user_id`, `correo`, `rol`, `ciudad`, `compania_id` (opcional), `exp`.
+
+## 6.2. Cual es la diferencia entre rol ADMIN de Medellin y Bogota?
+
+Ambos son ADMIN a nivel de rol (pueden crear y actualizar). La politica `PoliticaAdminCiudad` lee el claim `ciudad`:
+
+- **Medellin:** CRUD completo, incluido DELETE.
+- **Bogota:** puede GET, POST, PUT y PATCH, pero DELETE devuelve 403.
 
 ## 7. Por que no se guarda la contrasena en texto plano?
 
@@ -38,7 +49,12 @@ La politica revisa el rol y la compania del usuario autenticado. Si es ADMIN, pe
 
 ## 10. Como se compara con ASP.NET Core?
 
-En ASP.NET Core se usaria `[Authorize(Roles="ADMIN")]` para roles y `[Authorize(Policy="EsPropietario")]` para politicas. En Django REST Framework se logra con permission classes, validando los claims del JWT y los datos del recurso.
+En ASP.NET Core se usaria `[Authorize(Roles="ADMIN")]` para roles y `[Authorize(Policy="EsPropietario")]` o `[Authorize(Policy="AdminCiudad")]` para politicas. En Django REST Framework se logra con permission classes (`IsAdmin`, `EsPropietarioDeCompania`, `PoliticaAdminCiudad`), validando claims del JWT y, si aplica, el objeto del recurso.
+
+## 9. Donde esta documentado el login y las politicas?
+
+- `README_PARTE_II.md` — seccion 4 (resumen tecnico).
+- `.docs/GUIA_AUTH_JWT.md` — guia paso a paso con ejemplos curl y matriz de permisos.
 
 ## 11. Como se mantiene Onion Architecture?
 
