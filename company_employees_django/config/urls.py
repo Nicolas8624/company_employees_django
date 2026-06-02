@@ -6,9 +6,12 @@ Se incluyen las rutas definidas en api/routes/urls.py
 """
 from django.contrib import admin
 from django.urls import include, path
+from django.views.generic import TemplateView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     # API REST — todos los endpoints bajo /api/
     path('api/', include('api.routes.urls')),
+    # Frontend SPA
+    path('', TemplateView.as_view(template_name='index.html'), name='frontend'),
 ]

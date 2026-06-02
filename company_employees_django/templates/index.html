@@ -1,0 +1,1959 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Hub — Gestión de Compañías y Empleados</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-gradient: radial-gradient(circle at 50% 0%, #16192b 0%, #090a0f 100%);
+            --panel-bg: rgba(20, 24, 46, 0.45);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --neon-blue: #00f2fe;
+            --neon-purple: #9b51e0;
+            --neon-green: #00ff87;
+            --neon-red: #ff3366;
+            --text-primary: #f5f6fa;
+            --text-secondary: #a0aec0;
+            --font-family-title: 'Outfit', sans-serif;
+            --font-family-body: 'Plus Jakarta Sans', sans-serif;
+            --transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            font-family: var(--font-family-body);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        /* Ambient Glowing Orbs */
+        .ambient-orb {
+            position: absolute;
+            width: 450px;
+            height: 450px;
+            border-radius: 50%;
+            filter: blur(140px);
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+        .orb-left {
+            top: 15%;
+            left: -150px;
+            background: var(--neon-blue);
+        }
+        .orb-right {
+            bottom: 10%;
+            right: -150px;
+            background: var(--neon-purple);
+        }
+
+        header {
+            width: 100%;
+            padding: 24px 40px;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--panel-border);
+            backdrop-filter: blur(12px);
+            background: rgba(9, 10, 15, 0.6);
+        }
+
+        .logo {
+            font-family: var(--font-family-title);
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo i {
+            -webkit-text-fill-color: var(--neon-blue);
+            text-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
+        }
+
+        /* Glassmorphic Container */
+        .glass-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 24px;
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            z-index: 5;
+            transition: var(--transition-smooth);
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            z-index: 5;
+        }
+
+        /* Auth Container */
+        .auth-container {
+            width: 100%;
+            max-width: 960px;
+            display: grid;
+            grid-template-columns: 1fr 1.1fr;
+            overflow: hidden;
+            animation: fadeInUp 0.8s var(--transition-smooth);
+        }
+
+        .auth-left-promo {
+            padding: 60px 48px;
+            background: rgba(14, 16, 29, 0.55);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-right: 1px solid var(--panel-border);
+        }
+
+        .auth-left-promo h2 {
+            font-family: var(--font-family-title);
+            font-size: 36px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            background: linear-gradient(to right, #ffffff, #c3c7db);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .auth-left-promo p {
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .quick-select-title {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--neon-blue);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quick-accounts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .quick-acc-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quick-acc-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: transparent;
+            transition: var(--transition-smooth);
+        }
+
+        .quick-acc-card.medellin::before { background: var(--neon-green); }
+        .quick-acc-card.bogota::before { background: var(--neon-red); }
+        .quick-acc-card.techcorp::before { background: var(--neon-purple); }
+
+        .quick-acc-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(5px);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .quick-acc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .quick-acc-role {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        
+        .quick-acc-city {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .medellin .quick-acc-city { color: var(--neon-green); background: rgba(0, 255, 135, 0.08); }
+        .bogota .quick-acc-city { color: var(--neon-red); background: rgba(255, 51, 102, 0.08); }
+        .techcorp .quick-acc-city { color: var(--neon-purple); background: rgba(155, 81, 224, 0.08); }
+
+        .quick-acc-email {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .quick-acc-desc {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-top: 2px;
+        }
+
+        .auth-right-form {
+            padding: 60px 48px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .auth-right-form h3 {
+            font-family: var(--font-family-title);
+            font-size: 26px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .auth-right-form .subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 16px;
+            color: var(--text-secondary);
+            font-size: 16px;
+            transition: var(--transition-smooth);
+        }
+
+        .form-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            padding: 14px 16px 14px 44px;
+            color: var(--text-primary);
+            font-family: var(--font-family-body);
+            font-size: 14px;
+            outline: none;
+            transition: var(--transition-smooth);
+        }
+
+        .form-input:focus {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.15);
+        }
+
+        .form-input:focus + i {
+            color: var(--neon-blue);
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+            color: #0c0f1d;
+            font-family: var(--font-family-title);
+            font-size: 15px;
+            font-weight: 700;
+            padding: 14px;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            margin-top: 10px;
+            box-shadow: 0 4px 20px rgba(0, 242, 254, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 242, 254, 0.35);
+            background: linear-gradient(135deg, #00f2fe, #b574f7);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        /* Error Banner */
+        .alert-banner {
+            background: rgba(255, 51, 102, 0.1);
+            border: 1px solid rgba(255, 51, 102, 0.2);
+            color: #ff5e83;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        /* Main Dashboard (Hidden by Default) */
+        .dashboard-container {
+            width: 100%;
+            max-width: 1200px;
+            display: none;
+            flex-direction: column;
+            gap: 30px;
+            animation: fadeIn 0.6s var(--transition-smooth);
+        }
+
+        /* Dashboard Top Header Info */
+        .dashboard-hud {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 30px;
+        }
+
+        .profile-hud-card {
+            padding: 24px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .profile-hud-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .avatar-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: #0c0f1d;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
+            font-weight: 700;
+        }
+
+        .profile-hud-details h4 {
+            font-family: var(--font-family-title);
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .profile-hud-details p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .profile-badges-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-role {
+            background: rgba(155, 81, 224, 0.15);
+            color: #bd86f2;
+            border: 1px solid rgba(155, 81, 224, 0.3);
+        }
+
+        .badge-city {
+            background: rgba(0, 242, 254, 0.15);
+            color: #7bf3ff;
+            border: 1px solid rgba(0, 242, 254, 0.3);
+        }
+        
+        .badge-city.bogota {
+            background: rgba(255, 51, 102, 0.15);
+            color: #ff85a3;
+            border: 1px solid rgba(255, 51, 102, 0.3);
+        }
+
+        .policy-hud-card {
+            padding: 24px 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .policy-headline {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--neon-blue);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .policy-description {
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text-secondary);
+        }
+
+        /* Toggle Override Section */
+        .override-toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 8px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-top: 4px;
+        }
+
+        .override-toggle-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .override-toggle-label i {
+            color: var(--neon-red);
+        }
+
+        /* Switch Styling */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .4s;
+            border-radius: 20px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--neon-red);
+            box-shadow: 0 0 10px rgba(255, 51, 102, 0.4);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        /* CRUD Main Grid Dashboard */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+
+        .crud-tabs-header {
+            display: flex;
+            gap: 15px;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 15px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-family: var(--font-family-title);
+            font-size: 16px;
+            font-weight: 600;
+            padding: 8px 20px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            color: #0c0f1d;
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.25);
+        }
+
+        .crud-content-card {
+            padding: 30px;
+            min-height: 450px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .crud-actions-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-box-wrapper {
+            position: relative;
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .search-box-wrapper i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        .search-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 10px 16px 10px 42px;
+            color: var(--text-primary);
+            font-family: var(--font-family-body);
+            font-size: 13px;
+            outline: none;
+            transition: var(--transition-smooth);
+        }
+
+        .search-input:focus {
+            border-color: var(--neon-blue);
+            background: rgba(255, 255, 255, 0.07);
+        }
+
+        .right-actions-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-action {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            font-family: var(--font-family-title);
+            font-size: 13px;
+            font-weight: 600;
+            padding: 10px 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-action:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-action:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            background: rgba(255, 255, 255, 0.01) !important;
+            border-color: rgba(255, 255, 255, 0.03) !important;
+            color: rgba(255, 255, 255, 0.2) !important;
+        }
+
+        .btn-action.primary {
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+            color: #0c0f1d;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0, 242, 254, 0.15);
+        }
+
+        .btn-action.primary:hover:not(:disabled) {
+            box-shadow: 0 6px 20px rgba(0, 242, 254, 0.3);
+            filter: brightness(1.1);
+        }
+
+        .btn-action.danger {
+            background: rgba(255, 51, 102, 0.1);
+            border-color: rgba(255, 51, 102, 0.2);
+            color: #ff5e83;
+        }
+        .btn-action.danger:hover:not(:disabled) {
+            background: rgba(255, 51, 102, 0.2);
+        }
+
+        /* Custom Table Design */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 14px;
+            border: 1px solid var(--panel-border);
+            background: rgba(0,0,0,0.15);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.8px;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--panel-border);
+            color: var(--text-primary);
+            transition: var(--transition-smooth);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .row-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-icon {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            color: var(--text-primary);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            font-size: 12px;
+        }
+
+        .btn-icon:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .btn-icon:disabled {
+            opacity: 0.25;
+            cursor: not-allowed;
+        }
+
+        .btn-icon.edit-btn:hover:not(:disabled) {
+            color: var(--neon-blue);
+            background: rgba(0, 242, 254, 0.08);
+            border-color: rgba(0, 242, 254, 0.2);
+        }
+
+        .btn-icon.delete-btn:hover:not(:disabled) {
+            color: var(--neon-red);
+            background: rgba(255, 51, 102, 0.08);
+            border-color: rgba(255, 51, 102, 0.2);
+        }
+
+        /* Console inspector card */
+        .console-card {
+            margin-top: 10px;
+            padding: 24px 30px;
+        }
+
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .console-title {
+            font-family: var(--font-family-title);
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--neon-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .console-clear-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .console-clear-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .console-output {
+            background: #060810;
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            height: 180px;
+            overflow-y: auto;
+            padding: 16px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #d1d5db;
+        }
+
+        .console-log-entry {
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            padding-bottom: 6px;
+        }
+
+        .log-req-indicator {
+            color: var(--neon-blue);
+            font-weight: bold;
+        }
+
+        .log-success-res {
+            color: var(--neon-green);
+            font-weight: bold;
+        }
+
+        .log-error-res {
+            color: var(--neon-red);
+            font-weight: bold;
+        }
+
+        /* Modal Form */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(9, 10, 15, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-card {
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            animation: scaleUp 0.4s var(--transition-smooth);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-header h4 {
+            font-family: var(--font-family-title);
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .modal-close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--panel-border);
+            background: rgba(9, 10, 15, 0.5);
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        /* Keyframes */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes scaleUp {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .auth-container {
+                grid-template-columns: 1fr;
+            }
+            .auth-left-promo {
+                border-right: none;
+                border-bottom: 1px solid var(--panel-border);
+                padding: 40px 30px;
+            }
+            .auth-right-form {
+                padding: 40px 30px;
+            }
+            .dashboard-hud {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Ambient Glowing Orbs -->
+    <div class="ambient-orb orb-left"></div>
+    <div class="ambient-orb orb-right"></div>
+
+    <header>
+        <div class="logo">
+            <i class="fa-solid fa-layer-group"></i> ENTERPRISE HUB
+        </div>
+        <div id="logout-section" style="display: none;">
+            <button class="btn-action danger" onclick="logout()">
+                <i class="fa-solid fa-sign-out-alt"></i> Cerrar Sesión
+            </button>
+        </div>
+    </header>
+
+    <main>
+        
+        <!-- ================= AUTH CONTAINER ================= -->
+        <div id="auth-panel" class="glass-panel auth-container">
+            <div class="auth-left-promo">
+                <div>
+                    <h2>Dynamic Claims & Policies Demo</h2>
+                    <p>Demostración interactiva de Onion Architecture, Repository Pattern y autorización basada en claims personalizadas (Medellín vs. Bogotá).</p>
+                </div>
+                
+                <div>
+                    <div class="quick-select-title">
+                        <i class="fa-solid fa-bolt"></i> Cuentas de Acceso Rápido
+                    </div>
+                    <div class="quick-accounts-list">
+                        <!-- Medellín Admin -->
+                        <div class="quick-acc-card medellin" onclick="quickLogin('admin_medellin@sena.edu.co', 'Admin123!')">
+                            <div class="quick-acc-header">
+                                <span class="quick-acc-role">Admin Medellín</span>
+                                <span class="quick-acc-city">Medellín</span>
+                            </div>
+                            <span class="quick-acc-email">admin_medellin@sena.edu.co</span>
+                            <span class="quick-acc-desc">Posee control CRUD completo sobre toda la API</span>
+                        </div>
+                        <!-- Bogotá Admin -->
+                        <div class="quick-acc-card bogota" onclick="quickLogin('admin_bogota@sena.edu.co', 'Admin123!')">
+                            <div class="quick-acc-header">
+                                <span class="quick-acc-role">Admin Bogotá</span>
+                                <span class="quick-acc-city">Bogotá</span>
+                            </div>
+                            <span class="quick-acc-email">admin_bogota@sena.edu.co</span>
+                            <span class="quick-acc-desc">CRUD completo excepto eliminar (DELETE bloqueado)</span>
+                        </div>
+                        <!-- Regular User -->
+                        <div class="quick-acc-card techcorp" onclick="quickLogin('usuario@techcorp.co', 'Usuario123!')">
+                            <div class="quick-acc-header">
+                                <span class="quick-acc-role">Usuario (TechCorp)</span>
+                                <span class="quick-acc-city">TechCorp Co.</span>
+                            </div>
+                            <span class="quick-acc-email">usuario@techcorp.co</span>
+                            <span class="quick-acc-desc">Usuario común: Solo gestiona empleados propios</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="auth-right-form">
+                <h3>Iniciar Sesión</h3>
+                <p class="subtitle">Ingresa tus credenciales para adquirir tu Token JWT.</p>
+                
+                <div id="auth-error" class="alert-banner">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span id="auth-error-msg">Error de autenticación</span>
+                </div>
+
+                <form id="login-form" onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label class="form-label" for="login-email">Correo Electrónico</label>
+                        <div class="input-wrapper">
+                            <input class="form-input" type="email" id="login-email" required placeholder="correo@ejemplo.com">
+                            <i class="fa-regular fa-envelope"></i>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="login-password">Contraseña</label>
+                        <div class="input-wrapper">
+                            <input class="form-input" type="password" id="login-password" required placeholder="••••••••">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                    </div>
+                    
+                    <button class="btn-submit" type="submit" id="login-btn">
+                        <span>Ingresar de forma segura</span> <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ================= MAIN DASHBOARD CONTAINER ================= -->
+        <div id="dashboard-panel" class="dashboard-container">
+            
+            <!-- HUD TOP ROW -->
+            <div class="dashboard-hud">
+                <div class="glass-panel profile-hud-card">
+                    <div class="profile-hud-info">
+                        <div class="avatar-circle" id="user-avatar">AD</div>
+                        <div class="profile-hud-details">
+                            <h4 id="user-display-email">admin@sena.edu.co</h4>
+                            <p>Sesión activa con firma JWT íntegra</p>
+                            <div class="profile-badges-row">
+                                <span class="badge badge-role" id="user-badge-role">ADMIN</span>
+                                <span class="badge badge-city" id="user-badge-city">Medellín</span>
+                            </div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-shield-halved" style="font-size: 40px; color: var(--neon-blue); opacity: 0.8; text-shadow: 0 0 10px rgba(0, 242, 254, 0.3);"></i>
+                </div>
+
+                <div class="glass-panel policy-hud-card">
+                    <div class="policy-headline">
+                        <i class="fa-solid fa-lock-open" id="policy-lock-icon"></i> <span id="policy-status-title">Políticas de Control Activas</span>
+                    </div>
+                    <div class="policy-description" id="policy-description-text">
+                        Cargando directivas de acceso...
+                    </div>
+                    
+                    <!-- Toggle Override -->
+                    <div class="override-toggle-container">
+                        <span class="override-toggle-label">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Forzar envío manual (evadir bloqueo UI)
+                        </span>
+                        <label class="switch">
+                            <input type="checkbox" id="force-send-toggle" onchange="toggleForceSend()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABS & CRUD CARD -->
+            <div class="dashboard-grid">
+                
+                <div>
+                    <div class="crud-tabs-header">
+                        <button class="tab-btn active" id="tab-btn-companias" onclick="switchTab('companias')">
+                            <i class="fa-solid fa-building"></i> Compañías
+                        </button>
+                        <button class="tab-btn" id="tab-btn-empleados" onclick="switchTab('empleados')">
+                            <i class="fa-solid fa-users"></i> Empleados
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CRUD Tab Contents Card -->
+                <div class="glass-panel crud-content-card">
+                    
+                    <!-- COMPANIAS VIEW CONTENT -->
+                    <div id="view-companias">
+                        <div class="crud-actions-row">
+                            <div class="search-box-wrapper">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input class="search-input" type="text" id="search-companias" placeholder="Buscar compañía..." oninput="loadCompanias()">
+                            </div>
+                            <div class="right-actions-group">
+                                <button class="btn-action primary" id="btn-create-compania" onclick="openCompaniaModal()">
+                                    <i class="fa-solid fa-plus"></i> Registrar Compañía
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <br>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nombre</th>
+                                        <th>Dirección</th>
+                                        <th>Teléfono</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="companias-table-body">
+                                    <!-- Dynamic -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- EMPLEADOS VIEW CONTENT -->
+                    <div id="view-empleados" style="display: none;">
+                        <div class="crud-actions-row">
+                            <div class="search-box-wrapper">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input class="search-input" type="text" id="search-empleados" placeholder="Buscar empleado..." oninput="loadEmpleados()">
+                            </div>
+                            <div class="right-actions-group">
+                                <button class="btn-action primary" id="btn-create-empleado" onclick="openEmpleadoModal()">
+                                    <i class="fa-solid fa-plus"></i> Registrar Empleado
+                                </button>
+                                <button class="btn-action danger" id="btn-bulk-delete" onclick="handleBulkDelete()">
+                                    <i class="fa-solid fa-trash-can"></i> Bulk Delete
+                                </button>
+                            </div>
+                        </div>
+
+                        <br>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nombre Completo</th>
+                                        <th>Correo</th>
+                                        <th>Cargo</th>
+                                        <th>Salario</th>
+                                        <th>Compañía</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="empleados-table-body">
+                                    <!-- Dynamic -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- LIVE HTTP CONSOLE LOGGER -->
+            <div class="glass-panel console-card">
+                <div class="console-header">
+                    <div class="console-title">
+                        <i class="fa-solid fa-terminal"></i> API HTTP Console Inspector
+                    </div>
+                    <button class="console-clear-btn" onclick="clearConsole()">
+                        <i class="fa-solid fa-trash-arrow-up"></i> Limpiar Consola
+                    </button>
+                </div>
+                <div class="console-output" id="console-logs">
+                    <div class="console-log-entry" style="color: #6b7280; font-style: italic;">
+                        Consola iniciada. Realiza acciones de CRUD para interceptar y visualizar peticiones...
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- ================= COMPANIA MODAL ================= -->
+    <div class="modal" id="compania-modal">
+        <div class="glass-panel modal-card">
+            <div class="modal-header">
+                <h4 id="compania-modal-title">Registrar Compañía</h4>
+                <button class="modal-close-btn" onclick="closeCompaniaModal()">&times;</button>
+            </div>
+            <form id="compania-form" onsubmit="saveCompania(event)">
+                <input type="hidden" id="compania-id">
+                <div class="form-group">
+                    <label class="form-label">Nombre de la Compañía</label>
+                    <div class="input-wrapper">
+                        <input class="form-input" style="padding-left: 15px;" type="text" id="compania-nombre" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Dirección</label>
+                    <div class="input-wrapper">
+                        <input class="form-input" style="padding-left: 15px;" type="text" id="compania-direccion" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Teléfono</label>
+                    <div class="input-wrapper">
+                        <input class="form-input" style="padding-left: 15px;" type="text" id="compania-telefono" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-action" type="button" onclick="closeCompaniaModal()">Cancelar</button>
+                    <button class="btn-action primary" type="submit" id="compania-submit-btn">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= EMPLEADO MODAL ================= -->
+    <div class="modal" id="empleado-modal">
+        <div class="glass-panel modal-card">
+            <div class="modal-header">
+                <h4 id="empleado-modal-title">Registrar Empleado</h4>
+                <button class="modal-close-btn" onclick="closeEmpleadoModal()">&times;</button>
+            </div>
+            <form id="empleado-form" onsubmit="saveEmpleado(event)">
+                <input type="hidden" id="empleado-id">
+                <div class="form-group">
+                    <label class="form-label">Nombre</label>
+                    <div class="input-wrapper">
+                        <input class="form-input" style="padding-left: 15px;" type="text" id="empleado-nombre" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Apellido</label>
+                    <div class="input-wrapper">
+                        <input class="form-input" style="padding-left: 15px;" type="text" id="empleado-apellido" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Correo Electrónico</label>
+                    <div class="input-wrapper">
+                        <input class="form-input" style="padding-left: 15px;" type="email" id="empleado-correo" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cargo</label>
+                    <div class="input-wrapper">
+                        <input class="form-input" style="padding-left: 15px;" type="text" id="empleado-cargo" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Salario</label>
+                    <div class="input-wrapper">
+                        <input class="form-input" style="padding-left: 15px;" type="number" step="0.01" id="empleado-salario" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Compañía</label>
+                    <div class="input-wrapper">
+                        <select class="form-input" style="padding-left: 15px;" id="empleado-compania" required>
+                            <!-- Dynamic -->
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-action" type="button" onclick="closeEmpleadoModal()">Cancelar</button>
+                    <button class="btn-action primary" type="submit" id="empleado-submit-btn">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer>
+        Enterprise Hub — Onion Architecture, Repository Pattern, and JWT Security. Actividad Académica SENA.
+    </footer>
+
+    <!-- ================= JAVASCRIPT LOGIC ================= -->
+    <script>
+        let token = localStorage.getItem('token') || '';
+        let currentUser = null;
+        let activeTab = 'companias';
+        let currentCompanies = [];
+
+        // Dynamic policy enforcement variables
+        let isForceSend = false;
+
+        function normalizeCiudad(ciudad) {
+            return (ciudad || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .trim();
+        }
+
+        function isBogotaAdmin(user) {
+            return user && user.rol === 'ADMIN' && normalizeCiudad(user.ciudad) === 'bogota';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (token) {
+                checkAuth();
+            } else {
+                showAuthForm();
+            }
+        });
+
+        function showAuthForm() {
+            document.getElementById('auth-panel').style.display = 'grid';
+            document.getElementById('dashboard-panel').style.display = 'none';
+            document.getElementById('logout-section').style.display = 'none';
+        }
+
+        function showDashboard() {
+            document.getElementById('auth-panel').style.display = 'none';
+            document.getElementById('dashboard-panel').style.display = 'flex';
+            document.getElementById('logout-section').style.display = 'block';
+            
+            // Render profile HUD
+            document.getElementById('user-display-email').textContent = currentUser.correo;
+            document.getElementById('user-badge-role').textContent = currentUser.rol;
+            
+            const cityBadge = document.getElementById('user-badge-city');
+            cityBadge.textContent = currentUser.ciudad || 'Medellín';
+            if (isBogotaAdmin(currentUser)) {
+                cityBadge.className = 'badge badge-city bogota';
+            } else {
+                cityBadge.className = 'badge badge-city';
+            }
+
+            document.getElementById('user-avatar').textContent = currentUser.correo.substring(0,2).toUpperCase();
+            
+            applyPolicyUIEnforcement();
+            
+            // Load appropriate tab data
+            loadTab(activeTab);
+        }
+
+        function quickLogin(email, password) {
+            document.getElementById('login-email').value = email;
+            document.getElementById('login-password').value = password;
+            document.getElementById('login-btn').click();
+        }
+
+        function logConsoleRequest(method, url, payload = null) {
+            const consoleBox = document.getElementById('console-logs');
+            const entry = document.createElement('div');
+            entry.className = 'console-log-entry';
+            
+            let payloadText = payload ? `<br>Payload: <span style="color:#d97706;">${JSON.stringify(payload)}</span>` : '';
+            entry.innerHTML = `<span class="log-req-indicator">[REQUEST]</span> <span style="font-weight:600;">${method}</span> ${url} ${payloadText}`;
+            consoleBox.appendChild(entry);
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+        }
+
+        async function logConsoleResponse(status, responsePromise) {
+            const consoleBox = document.getElementById('console-logs');
+            const entry = document.createElement('div');
+            entry.className = 'console-log-entry';
+            
+            let dataText = '';
+            try {
+                const data = await responsePromise;
+                dataText = JSON.stringify(data);
+            } catch(e) {
+                dataText = 'No data or error reading response';
+            }
+            
+            const statusClass = status >= 200 && status < 300 ? 'log-success-res' : 'log-error-res';
+            entry.innerHTML = `<span class="${statusClass}">[RESPONSE - ${status}]</span> Data: <span style="color:#a78bfa;">${dataText}</span>`;
+            consoleBox.appendChild(entry);
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+        }
+
+        function clearConsole() {
+            document.getElementById('console-logs').innerHTML = `<div class="console-log-entry" style="color: #6b7280; font-style: italic;">Consola limpiada.</div>`;
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errorBanner = document.getElementById('auth-error');
+            errorBanner.style.display = 'none';
+
+            logConsoleRequest('POST', '/api/auth/login', { correo: email, password: '***' });
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ correo: email, password })
+                });
+                
+                const dataPromise = response.clone().json();
+                logConsoleResponse(response.status, dataPromise);
+                const data = await dataPromise;
+
+                if (response.ok) {
+                    token = data.token;
+                    localStorage.setItem('token', token);
+                    currentUser = data.usuario;
+                    showDashboard();
+                } else {
+                    errorBanner.style.display = 'flex';
+                    document.getElementById('auth-error-msg').textContent = data.mensaje || 'Credenciales inválidas';
+                }
+            } catch (err) {
+                console.error(err);
+                errorBanner.style.display = 'flex';
+                document.getElementById('auth-error-msg').textContent = 'Error de conexión con la API';
+            }
+        }
+
+        async function checkAuth() {
+            logConsoleRequest('GET', '/api/auth/perfil');
+            try {
+                const response = await fetch('/api/auth/perfil', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const dataPromise = response.clone().json();
+                logConsoleResponse(response.status, dataPromise);
+                const data = await dataPromise;
+
+                if (response.ok) {
+                    currentUser = data;
+                    showDashboard();
+                } else {
+                    logout();
+                }
+            } catch (err) {
+                logout();
+            }
+        }
+
+        function logout() {
+            token = '';
+            currentUser = null;
+            localStorage.removeItem('token');
+            showAuthForm();
+            clearConsole();
+        }
+
+        function switchTab(tab) {
+            document.getElementById(`tab-btn-${activeTab}`).classList.remove('active');
+            document.getElementById(`view-${activeTab}`).style.display = 'none';
+            
+            activeTab = tab;
+            document.getElementById(`tab-btn-${activeTab}`).classList.add('active');
+            document.getElementById(`view-${activeTab}`).style.display = 'block';
+            
+            loadTab(activeTab);
+        }
+
+        function loadTab(tab) {
+            if (tab === 'companias') {
+                loadCompanias();
+            } else if (tab === 'empleados') {
+                loadEmpleados();
+            }
+        }
+
+        function toggleForceSend() {
+            isForceSend = document.getElementById('force-send-toggle').checked;
+            applyPolicyUIEnforcement();
+        }
+
+        function applyPolicyUIEnforcement() {
+            if (!currentUser) return;
+
+            const bogotaAdmin = isBogotaAdmin(currentUser);
+            const isRegularUser = currentUser.rol === 'USUARIO';
+            
+            const policyTitle = document.getElementById('policy-status-title');
+            const policyText = document.getElementById('policy-description-text');
+            const lockIcon = document.getElementById('policy-lock-icon');
+
+            if (bogotaAdmin) {
+                policyTitle.textContent = 'Política de Ciudad Activa: Sin eliminar';
+                policyText.innerHTML = '<strong>Administrador de Bogotá:</strong> Puedes consultar, crear y actualizar (GET, POST, PUT, PATCH). La operación <strong>DELETE</strong> está bloqueada por política.';
+                lockIcon.className = 'fa-solid fa-lock-open';
+                lockIcon.style.color = 'var(--neon-red)';
+            } else if (isRegularUser) {
+                policyTitle.textContent = 'Política de Propietario de Compañía';
+                policyText.innerHTML = `<strong>Usuario de Compañía:</strong> Sólo tienes permisos para modificar y registrar empleados asociados a tu misma compañía (Compañía ID: ${currentUser.compania_id || 'Ninguna'}).`;
+                lockIcon.className = 'fa-solid fa-building-circle-check';
+                lockIcon.style.color = 'var(--neon-purple)';
+            } else {
+                policyTitle.textContent = 'Acceso Completo Garantizado';
+                policyText.innerHTML = '<strong>Administrador de Medellín:</strong> Cuentas con control CRUD absoluto sobre todos los recursos y todas las operaciones HTTP (GET, POST, PUT, PATCH, DELETE).';
+                lockIcon.className = 'fa-solid fa-shield-check';
+                lockIcon.style.color = 'var(--neon-green)';
+            }
+
+            document.getElementById('btn-create-compania').disabled = false;
+            document.getElementById('btn-create-empleado').disabled = false;
+
+            document.getElementById('btn-bulk-delete').disabled =
+                isRegularUser || (bogotaAdmin && !isForceSend);
+        }
+
+        // ================= COMPANIAS DATA CRUD =================
+        async function loadCompanias() {
+            const search = document.getElementById('search-companias').value;
+            const url = `/api/companias?pagina=1&tamano=20&buscar=${encodeURIComponent(search)}`;
+            
+            logConsoleRequest('GET', url);
+            try {
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const dataPromise = response.clone().json();
+                logConsoleResponse(response.status, dataPromise);
+                const data = await dataPromise;
+
+                if (response.ok) {
+                    currentCompanies = data.datos;
+                    renderCompaniasTable(data.datos);
+                    updateEmpleadoCompanyDropdown(data.datos);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderCompaniasTable(list) {
+            const tbody = document.getElementById('companias-table-body');
+            tbody.innerHTML = '';
+            
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-secondary);">Ninguna compañía encontrada</td></tr>`;
+                return;
+            }
+
+            const bogotaAdmin = isBogotaAdmin(currentUser);
+            const disableDelete = bogotaAdmin && !isForceSend;
+
+            list.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${c.id}</td>
+                    <td style="font-weight:600; color:var(--neon-blue);">${c.nombre}</td>
+                    <td>${c.direccion}</td>
+                    <td>${c.telefono}</td>
+                    <td>
+                        <div class="row-actions">
+                            <button class="btn-icon edit-btn" title="Actualizar (PUT)" onclick="openCompaniaModal(${c.id})">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button class="btn-icon edit-btn" title="PATCH" onclick="openCompaniaPatch(${c.id})">
+                                <i class="fa-solid fa-wrench"></i>
+                            </button>
+                            <button class="btn-icon delete-btn" title="Eliminar (DELETE)" onclick="deleteCompania(${c.id})" ${disableDelete ? 'disabled' : ''}>
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openCompaniaModal(id = null) {
+            document.getElementById('compania-form').reset();
+            document.getElementById('compania-id').value = id || '';
+            document.getElementById('compania-submit-btn').textContent = id ? 'Guardar Cambios (PUT)' : 'Crear Compañía (POST)';
+            document.getElementById('compania-modal-title').textContent = id ? 'Editar Compañía (PUT)' : 'Registrar Compañía (POST)';
+
+            if (id) {
+                const comp = currentCompanies.find(c => c.id === id);
+                if (comp) {
+                    document.getElementById('compania-nombre').value = comp.nombre;
+                    document.getElementById('compania-direccion').value = comp.direccion;
+                    document.getElementById('compania-telefono').value = comp.telefono;
+                }
+            }
+
+            document.getElementById('compania-modal').classList.add('show');
+        }
+
+        function closeCompaniaModal() {
+            document.getElementById('compania-modal').classList.remove('show');
+        }
+
+        async function openCompaniaPatch(id) {
+            const nuevoTelefono = prompt("Ingresa el nuevo número de Teléfono (Para probar PATCH):");
+            if (nuevoTelefono === null) return;
+            
+            const url = `/api/companias/${id}`;
+            const payload = { telefono: nuevoTelefono };
+
+            logConsoleRequest('PATCH', url, payload);
+            try {
+                const response = await fetch(url, {
+                    method: 'PATCH',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const dataPromise = response.clone().json();
+                logConsoleResponse(response.status, dataPromise);
+                const data = await dataPromise;
+
+                if (response.ok) {
+                    loadCompanias();
+                } else {
+                    alert(`Error: ${data.mensaje || 'No permitido por políticas'}`);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function saveCompania(e) {
+            e.preventDefault();
+            const id = document.getElementById('compania-id').value;
+            const payload = {
+                nombre: document.getElementById('compania-nombre').value,
+                direccion: document.getElementById('compania-direccion').value,
+                telefono: document.getElementById('compania-telefono').value
+            };
+
+            const url = id ? `/api/companias/${id}` : '/api/companias';
+            const method = id ? 'PUT' : 'POST';
+
+            logConsoleRequest(method, url, payload);
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const dataPromise = response.clone().json();
+                logConsoleResponse(response.status, dataPromise);
+                const data = await dataPromise;
+
+                if (response.ok) {
+                    closeCompaniaModal();
+                    loadCompanias();
+                } else {
+                    alert(`Error de API (${response.status}): ${JSON.stringify(data)}`);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function deleteCompania(id) {
+            if (!confirm('¿Estás seguro de eliminar esta compañía?')) return;
+            const url = `/api/companias/${id}`;
+            
+            logConsoleRequest('DELETE', url);
+            try {
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                let logDataPromise;
+                if (response.status === 204) {
+                    logDataPromise = Promise.resolve({ status: "deleted successfully (No Content)" });
+                } else {
+                    logDataPromise = response.clone().json();
+                }
+                logConsoleResponse(response.status, logDataPromise);
+
+                if (response.status === 204) {
+                    loadCompanias();
+                } else {
+                    alert('Error al eliminar compañía (verificar restricciones o políticas en consola)');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+
+        // ================= EMPLEADOS DATA CRUD =================
+        async function loadEmpleados() {
+            const search = document.getElementById('search-empleados').value;
+            const url = `/api/empleados?pagina=1&tamano=25&buscar=${encodeURIComponent(search)}`;
+            
+            logConsoleRequest('GET', url);
+            try {
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const dataPromise = response.clone().json();
+                logConsoleResponse(response.status, dataPromise);
+                const data = await dataPromise;
+
+                if (response.ok) {
+                    renderEmpleadosTable(data.datos);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderEmpleadosTable(list) {
+            const tbody = document.getElementById('empleados-table-body');
+            tbody.innerHTML = '';
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-secondary);">Ningún empleado encontrado</td></tr>`;
+                return;
+            }
+
+            const bogotaAdmin = isBogotaAdmin(currentUser);
+            const isRegularUser = currentUser && currentUser.rol === 'USUARIO';
+
+            list.forEach(e => {
+                const isDifferentCompany = isRegularUser && parseInt(currentUser.compania_id) !== parseInt(e.compania_id);
+                const disableEdit = isDifferentCompany && !isForceSend;
+                const disableDelete = (bogotaAdmin || isRegularUser) && !isForceSend;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${e.id}</td>
+                    <td style="font-weight:600; color:var(--neon-purple);">${e.nombre} ${e.apellido}</td>
+                    <td>${e.correo}</td>
+                    <td><span class="badge badge-role" style="font-size:11px; text-transform:none;">${e.cargo}</span></td>
+                    <td style="font-weight:600; color:var(--neon-green);">$${parseFloat(e.salario).toLocaleString('co')}</td>
+                    <td><span class="badge badge-city">${e.compania_nombre || 'ID: ' + e.compania_id}</span></td>
+                    <td>
+                        <div class="row-actions">
+                            <button class="btn-icon edit-btn" title="Actualizar (PUT)" onclick="openEmpleadoModal(${e.id}, ${e.compania_id}, '${e.nombre}', '${e.apellido}', '${e.correo}', '${e.cargo}', ${e.salario})" ${disableEdit ? 'disabled' : ''}>
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button class="btn-icon edit-btn" title="PATCH" onclick="openEmpleadoPatch(${e.id}, ${e.compania_id})" ${disableEdit ? 'disabled' : ''}>
+                                <i class="fa-solid fa-wrench"></i>
+                            </button>
+                            <button class="btn-icon delete-btn" title="Eliminar (DELETE)" onclick="deleteEmpleado(${e.id})" ${disableDelete ? 'disabled' : ''}>
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateEmpleadoCompanyDropdown(companies) {
+            const select = document.getElementById('empleado-compania');
+            select.innerHTML = '';
+            companies.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.nombre;
+                select.appendChild(opt);
+            });
+        }
+
+        function openEmpleadoModal(id = null, compId = null, nombre = '', apellido = '', correo = '', cargo = '', salario = '') {
+            document.getElementById('empleado-form').reset();
+            document.getElementById('empleado-id').value = id || '';
+            document.getElementById('empleado-submit-btn').textContent = id ? 'Guardar Cambios (PUT)' : 'Crear Empleado (POST)';
+            document.getElementById('empleado-modal-title').textContent = id ? 'Editar Empleado (PUT)' : 'Registrar Empleado (POST)';
+
+            if (id) {
+                document.getElementById('empleado-nombre').value = nombre;
+                document.getElementById('empleado-apellido').value = apellido;
+                document.getElementById('empleado-correo').value = correo;
+                document.getElementById('empleado-cargo').value = cargo;
+                document.getElementById('empleado-salario').value = salario;
+                document.getElementById('empleado-compania').value = compId;
+            }
+
+            document.getElementById('empleado-modal').classList.add('show');
+        }
+
+        function closeEmpleadoModal() {
+            document.getElementById('empleado-modal').classList.remove('show');
+        }
+
+        async function saveEmpleado(e) {
+            e.preventDefault();
+            const id = document.getElementById('empleado-id').value;
+            const payload = {
+                nombre: document.getElementById('empleado-nombre').value,
+                apellido: document.getElementById('empleado-apellido').value,
+                correo: document.getElementById('empleado-correo').value,
+                cargo: document.getElementById('empleado-cargo').value,
+                salario: parseFloat(document.getElementById('empleado-salario').value),
+                compania_id: parseInt(document.getElementById('empleado-compania').value)
+            };
+
+            const url = id ? `/api/empleados/${id}` : '/api/empleados';
+            const method = id ? 'PUT' : 'POST';
+
+            logConsoleRequest(method, url, payload);
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const dataPromise = response.clone().json();
+                logConsoleResponse(response.status, dataPromise);
+                const data = await dataPromise;
+
+                if (response.ok) {
+                    closeEmpleadoModal();
+                    loadEmpleados();
+                } else {
+                    alert(`Error de API (${response.status}): ${JSON.stringify(data)}`);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function openEmpleadoPatch(id, compId) {
+            const nuevoCargo = prompt("Ingresa el nuevo Cargo de trabajo (PATCH parcial):");
+            if (nuevoCargo === null) return;
+
+            const url = `/api/empleados/${id}`;
+            const payload = { cargo: nuevoCargo };
+
+            logConsoleRequest('PATCH', url, payload);
+            try {
+                const response = await fetch(url, {
+                    method: 'PATCH',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const dataPromise = response.clone().json();
+                logConsoleResponse(response.status, dataPromise);
+                const data = await dataPromise;
+
+                if (response.ok) {
+                    loadEmpleados();
+                } else {
+                    alert(`Error: ${data.mensaje || 'Restringido por políticas'}`);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function deleteEmpleado(id) {
+            if (!confirm('¿Estás seguro de eliminar este empleado?')) return;
+            const url = `/api/empleados/${id}`;
+
+            logConsoleRequest('DELETE', url);
+            try {
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                let logDataPromise;
+                if (response.status === 204) {
+                    logDataPromise = Promise.resolve({ status: "deleted successfully (No Content)" });
+                } else {
+                    logDataPromise = response.clone().json();
+                }
+                logConsoleResponse(response.status, logDataPromise);
+
+                if (response.status === 204) {
+                    loadEmpleados();
+                } else {
+                    alert('Error al eliminar empleado (verificar restricciones o políticas en consola)');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function handleBulkDelete() {
+            const rawIds = prompt("Ingresa los IDs de los empleados a eliminar en bulk, separados por comas (Ej: 1,2,3):");
+            if (!rawIds) return;
+            
+            const idsArray = rawIds.split(',').map(i => parseInt(i.trim())).filter(i => !isNaN(i));
+            if (idsArray.length === 0) return;
+
+            const url = '/api/empleados/bulk-delete';
+            const payload = { ids: idsArray };
+
+            logConsoleRequest('DELETE', url, payload);
+            try {
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const dataPromise = response.clone().json();
+                logConsoleResponse(response.status, dataPromise);
+                const data = await dataPromise;
+
+                if (response.ok) {
+                    loadEmpleados();
+                    alert(`Éxito: Se eliminaron ${data.eliminados} empleados.`);
+                } else {
+                    alert(`Error (${response.status}): ${JSON.stringify(data)}`);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+    </script>
+</body>
+</html>
