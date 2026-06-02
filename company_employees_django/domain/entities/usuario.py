@@ -16,6 +16,7 @@ class Usuario:
     correo: str
     password_hash: str
     rol: str
+    ciudad: str = "Medellín"
     compania_id: Optional[int] = None
     id: Optional[int] = None
 
@@ -23,6 +24,7 @@ class Usuario:
         """Normalizar datos."""
         self.correo = self.correo.strip().lower() if isinstance(self.correo, str) else self.correo
         self.rol = self.rol.strip().upper() if isinstance(self.rol, str) else self.rol
+        self.ciudad = self.ciudad.strip() if isinstance(self.ciudad, str) else self.ciudad
 
     def validar(self) -> None:
         """Validar las reglas de negocio del usuario."""
@@ -30,6 +32,8 @@ class Usuario:
             raise DomainValidationError("El correo es requerido.")
         if not self.password_hash:
             raise DomainValidationError("La contraseña es requerida.")
+        if not self.ciudad:
+            raise DomainValidationError("La ciudad es requerida.")
         if self.rol not in ["ADMIN", "USUARIO"]:
             raise DomainValidationError("Rol inválido. Debe ser ADMIN o USUARIO.")
         if self.rol == "USUARIO" and not self.compania_id:
