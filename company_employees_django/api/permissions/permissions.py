@@ -6,6 +6,7 @@ Leen datos del UsuarioAutenticado (request.user) inyectado por
 JwtCustomAuthentication, sin acceder al ORM.
 """
 import logging
+import unicodedata
 
 from rest_framework.permissions import BasePermission
 
@@ -98,3 +99,42 @@ class EsPropietarioDeCompania(BasePermission):
             return False
 
         return int(user_compania_id) == int(empleado_compania_id)
+
+
+class PoliticaAdminCiudad(BasePermission):
+    """
+    Módulo 5 - Políticas / Claims (claim JWT: ciudad):
+
+    - ADMIN de Medellín (claim ciudad = medellin / medellín): CRUD completo.
+    - ADMIN de Bogotá (claim ciudad = bogota / bogotá): GET, POST, PUT y PATCH;
+      no puede eliminar (DELETE).
+    - Otros roles: esta política no aplica restricciones adicionales.
+    """
+    message = (
+        "Acceso restringido: los administradores de Bogotá no pueden eliminar recursos "
+        "(operación DELETE no permitida)."
+    )
+
+    @staticmethod
+    def _normalizar_ciudad(ciudad: str) -> str:
+        """Normaliza el string de ciudad eliminando tildes y convirtiéndolo a minúsculas."""
+        nfkd = unicodedata.normalize("NFD", ciudad)
+        return "".join(c for c in nfkd if unicodedata.category(c) != "Mn").lower().strip()
+
+    def has_permission(self, request, view):
+        user = getattr(request, "user", None)
+        if not user or not getattr(user, "is_authenticated", False):
+            return False
+
+        if getattr(user, "rol", "") != "ADMIN":
+            return True
+
+        ciudad = self._normalizar_ciudad(getattr(user, "ciudad", "") or "")
+
+        if ciudad == "bogota" and request.method == "DELETE":
+            logger.warning(
+                "Acceso bloqueado por política: Admin de Bogotá intentando DELETE"
+            )
+            return False
+
+        return True

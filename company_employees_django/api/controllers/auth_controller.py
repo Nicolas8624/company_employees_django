@@ -7,7 +7,9 @@ from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
+
+from api.permissions.permissions import IsAuthenticatedUser
 
 from infrastructure.service_locator import ServiceLocator
 from domain.exceptions import DomainValidationError
@@ -66,7 +68,7 @@ class PerfilController(APIView):
     """
     GET /api/auth/perfil -> Obtener el perfil del usuario logueado
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedUser]
 
     def get(self, request: Request) -> Response:
         logger.info("GET /api/auth/perfil")
@@ -76,6 +78,7 @@ class PerfilController(APIView):
             "id": user.id,
             "correo": user.correo,
             "rol": user.rol,
+            "ciudad": user.ciudad,
             "compania_id": user.compania_id,
         }, status=status.HTTP_200_OK)
 

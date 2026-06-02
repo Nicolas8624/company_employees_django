@@ -29,6 +29,7 @@ from api.permissions.permissions import (
     IsAdminOrUsuario,
     IsAuthenticatedUser,
     EsPropietarioDeCompania,
+    PoliticaAdminCiudad,
 )
 from domain.exceptions import DomainValidationError
 from infrastructure.service_locator import ServiceLocator
@@ -45,7 +46,7 @@ class EmpleadoListController(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [IsAuthenticatedUser()]
-        return [IsAdminOrUsuario()]
+        return [IsAdminOrUsuario(), PoliticaAdminCiudad()]
 
     def get(self, request: Request) -> Response:
         """Listar todos los empleados (con paginación)."""
@@ -103,9 +104,9 @@ class EmpleadoDetailController(APIView):
         if self.request.method == 'GET':
             return [IsAuthenticatedUser()]
         if self.request.method == 'DELETE':
-            return [IsAdmin()]
-        # PUT / PATCH: requiere autenticación + ser propietario de la compañía
-        return [IsAdminOrUsuario(), EsPropietarioDeCompania()]
+            return [IsAdmin(), PoliticaAdminCiudad()]
+        # PUT / PATCH: requiere autenticación + ser propietario de la compañía + política de ciudad
+        return [IsAdminOrUsuario(), EsPropietarioDeCompania(), PoliticaAdminCiudad()]
 
     def get(self, request: Request, pk: int) -> Response:
         """Obtener un empleado por su ID."""
@@ -199,8 +200,8 @@ class EmpleadoBulkController(APIView):
 
     def get_permissions(self):
         if self.request.method == 'DELETE':
-            return [IsAdmin()]
-        return [IsAdminOrUsuario()]
+            return [IsAdmin(), PoliticaAdminCiudad()]
+        return [IsAdminOrUsuario(), PoliticaAdminCiudad()]
 
     def post(self, request: Request) -> Response:
         logger.info("POST /api/empleados/bulk")

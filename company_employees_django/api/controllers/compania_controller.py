@@ -30,6 +30,7 @@ from api.permissions.permissions import (
     IsAdmin,
     IsAdminOrUsuario,
     IsAuthenticatedUser,
+    PoliticaAdminCiudad,
 )
 from domain.exceptions import DomainValidationError
 from infrastructure.service_locator import ServiceLocator
@@ -46,7 +47,7 @@ class CompaniaListController(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [IsAuthenticatedUser()]
-        return [IsAdminOrUsuario()]
+        return [IsAdminOrUsuario(), PoliticaAdminCiudad()]
 
     def get(self, request: Request) -> Response:
         """Listar todas las compañías (con paginación)."""
@@ -103,8 +104,8 @@ class CompaniaDetailController(APIView):
         if self.request.method == 'GET':
             return [IsAuthenticatedUser()]
         if self.request.method == 'DELETE':
-            return [IsAdmin()]
-        return [IsAdminOrUsuario()]
+            return [IsAdmin(), PoliticaAdminCiudad()]
+        return [IsAdminOrUsuario(), PoliticaAdminCiudad()]
 
     def get(self, request: Request, pk: int) -> Response:
         """Obtener una compañía por su ID."""
@@ -206,7 +207,7 @@ class CompaniaConEmpleadosController(APIView):
     POST /api/companias/con-empleados → Crear compañía + empleados [solo ADMIN]
     """
 
-    permission_classes = [IsAdmin]
+    permission_classes = [IsAdmin, PoliticaAdminCiudad]
 
     def post(self, request: Request) -> Response:
         """Crear compañía con empleados en una sola transacción."""

@@ -3,6 +3,7 @@ from api.permissions.permissions import (
     IsAdminOrUsuario,
     IsAuthenticatedUser,
     EsPropietarioDeCompania,
+    PoliticaAdminCiudad,
 )
 
 __all__ = [
@@ -10,4 +11,5 @@ __all__ = [
     "IsAdminOrUsuario",
     "IsAuthenticatedUser",
     "EsPropietarioDeCompania",
+    "PoliticaAdminCiudad",
 ]
