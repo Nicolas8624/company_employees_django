@@ -104,18 +104,46 @@ class Command(BaseCommand):
         # ============================================================
         from django.contrib.auth.hashers import make_password
 
+        # Admin tradicional (Medellín) para compatibilidad de tests
         admin_correo = "admin@sena.edu.co"
         if not UsuarioModel.objects.filter(correo=admin_correo).exists():
             UsuarioModel.objects.create(
                 correo=admin_correo,
                 password_hash=make_password("Admin123!"),
                 rol="ADMIN",
+                ciudad="Medellín",
                 compania=None,
             )
             self.stdout.write(self.style.SUCCESS(f"  [OK] Usuario ADMIN creado: {admin_correo}"))
             logger.info("Seed: Usuario ADMIN creado — %s", admin_correo)
         else:
             self.stdout.write(self.style.WARNING(f"  [SKIP] Usuario ADMIN ya existe: {admin_correo}"))
+
+        # Admin Medellín explícito
+        admin_med_correo = "admin_medellin@sena.edu.co"
+        if not UsuarioModel.objects.filter(correo=admin_med_correo).exists():
+            UsuarioModel.objects.create(
+                correo=admin_med_correo,
+                password_hash=make_password("Admin123!"),
+                rol="ADMIN",
+                ciudad="Medellín",
+                compania=None,
+            )
+            self.stdout.write(self.style.SUCCESS(f"  [OK] Usuario ADMIN Medellín creado: {admin_med_correo}"))
+            logger.info("Seed: Usuario ADMIN Medellín creado — %s", admin_med_correo)
+
+        # Admin Bogotá explícito
+        admin_bog_correo = "admin_bogota@sena.edu.co"
+        if not UsuarioModel.objects.filter(correo=admin_bog_correo).exists():
+            UsuarioModel.objects.create(
+                correo=admin_bog_correo,
+                password_hash=make_password("Admin123!"),
+                rol="ADMIN",
+                ciudad="Bogotá",
+                compania=None,
+            )
+            self.stdout.write(self.style.SUCCESS(f"  [OK] Usuario ADMIN Bogotá creado: {admin_bog_correo}"))
+            logger.info("Seed: Usuario ADMIN Bogotá creado — %s", admin_bog_correo)
 
         # Crear usuario USUARIO (asociado a TechCorp)
         usuario_correo = "usuario@techcorp.co"
@@ -124,6 +152,7 @@ class Command(BaseCommand):
                 correo=usuario_correo,
                 password_hash=make_password("Usuario123!"),
                 rol="USUARIO",
+                ciudad="Medellín",
                 compania=companias[0],
             )
             self.stdout.write(self.style.SUCCESS(f"  [OK] Usuario USUARIO creado: {usuario_correo}"))

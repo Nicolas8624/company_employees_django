@@ -28,6 +28,7 @@ class UsuarioAutenticado:
         self.id = payload.get("user_id")
         self.correo = payload.get("correo", "")
         self.rol = payload.get("rol", "")
+        self.ciudad = payload.get("ciudad", "Medellín")
         self.compania_id = payload.get("compania_id")
         self.is_authenticated = True
 

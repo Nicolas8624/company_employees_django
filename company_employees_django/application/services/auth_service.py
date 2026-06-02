@@ -54,6 +54,7 @@ class AuthService:
                 correo=data.get("correo"),
                 password_hash=self._hasher.hash_password(data.get("password")),
                 rol=rol,
+                ciudad=data.get("ciudad", "Medellín"),
                 compania_id=compania_id
             )
             usuario.validar()
@@ -67,6 +68,7 @@ class AuthService:
                 "id": creado.id,
                 "correo": creado.correo,
                 "rol": creado.rol,
+                "ciudad": creado.ciudad,
                 "compania_id": creado.compania_id
             },
             "token": token
@@ -91,6 +93,7 @@ class AuthService:
                 "id": usuario.id,
                 "correo": usuario.correo,
                 "rol": usuario.rol,
+                "ciudad": usuario.ciudad,
                 "compania_id": usuario.compania_id
             },
             "token": token

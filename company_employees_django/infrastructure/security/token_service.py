@@ -18,6 +18,7 @@ class JwtTokenService(ITokenService):
         refresh["user_id"] = usuario.id
         refresh["correo"] = usuario.correo
         refresh["rol"] = usuario.rol
+        refresh["ciudad"] = usuario.ciudad
         if usuario.compania_id:
             refresh["compania_id"] = usuario.compania_id
 

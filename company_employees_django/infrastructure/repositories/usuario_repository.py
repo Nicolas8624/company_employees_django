@@ -23,6 +23,7 @@ class UsuarioRepository(IUsuarioRepository):
             correo=model.correo,
             password_hash=model.password_hash,
             rol=model.rol,
+            ciudad=model.ciudad,
             compania_id=model.compania_id,
         )
 
@@ -42,6 +43,7 @@ class UsuarioRepository(IUsuarioRepository):
             correo=entity.correo,
             password_hash=entity.password_hash,
             rol=entity.rol,
+            ciudad=entity.ciudad,
             compania_id=entity.compania_id,
         )
         logger.debug("Repository: Usuario insertado (sin commit) ID=%s", model.id)

@@ -60,6 +60,7 @@ class UsuarioModel(models.Model):
     correo = models.EmailField(max_length=200, unique=True, verbose_name="Correo electrónico")
     password_hash = models.CharField(max_length=255, verbose_name="Contraseña Hash")
     rol = models.CharField(max_length=50, default="USUARIO", verbose_name="Rol")
+    ciudad = models.CharField(max_length=100, default="Medellín", verbose_name="Ciudad")
     compania = models.ForeignKey(
         CompaniaModel,
         on_delete=models.SET_NULL,
