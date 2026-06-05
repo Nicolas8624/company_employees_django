@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión — Enterprise Hub</title>
+    <meta name="description" content="Portal de autenticación JWT para gestión de compañías y empleados — Actividad 7 SENA">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Estilos compartidos -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+
+    <!-- ═══════════════ NAVBAR ═══════════════ -->
+    <nav class="navbar">
+        <div class="nav-logo">
+            <i class="fa-solid fa-layer-group"></i> ENTERPRISE HUB
+        </div>
+        <div style="font-size:12px; color:var(--text-3);">
+            <i class="fa-solid fa-shield-halved" style="color:var(--blue);"></i>
+            Actividad 7 — Control de acceso por ciudad
+        </div>
+    </nav>
+
+    <!-- ═══════════════ MAIN ═══════════════ -->
+    <main class="login-main">
+        <div class="glass login-card" role="main">
+
+            <!-- ─── PANEL IZQUIERDO — PROMO ─── -->
+            <div class="login-promo">
+                <div>
+                    <h2>Control de acceso<br>basado en ciudad</h2>
+                    <p>
+                        Sistema de autorización con JWT donde los permisos dependen de la ciudad del usuario.<br><br>
+                        <strong style="color:var(--green)">Medellín</strong> — puede eliminar, no puede editar.<br>
+                        <strong style="color:var(--red)">Bogotá</strong> — puede editar (PUT/PATCH), no puede eliminar.
+                    </p>
+                </div>
+
+                <!-- Cuentas de acceso rápido -->
+                <div class="quick-accounts">
+                    <h4><i class="fa-solid fa-bolt"></i> Acceso Rápido</h4>
+                    <div class="quick-acc-list">
+
+                        <!-- Admin Medellín -->
+                        <div class="quick-acc-item acc-medellin"
+                             id="quick-medellin"
+                             onclick="quickLogin('admin_medellin@sena.edu.co', 'Admin123!')"
+                             role="button" tabindex="0" aria-label="Iniciar sesión como Admin Medellín">
+                            <div class="acc-header">
+                                <span class="acc-name">Admin Medellín</span>
+                                <span class="acc-city-tag">Medellín</span>
+                            </div>
+                            <span class="acc-email">admin_medellin@sena.edu.co</span>
+                            <span class="acc-perms">GET · POST · BULK · DELETE (no PUT/PATCH)</span>
+                        </div>
+
+                        <!-- Admin Bogotá -->
+                        <div class="quick-acc-item acc-bogota"
+                             id="quick-bogota"
+                             onclick="quickLogin('admin_bogota@sena.edu.co', 'Admin123!')"
+                             role="button" tabindex="0" aria-label="Iniciar sesión como Admin Bogotá">
+                            <div class="acc-header">
+                                <span class="acc-name">Admin Bogotá</span>
+                                <span class="acc-city-tag">Bogotá</span>
+                            </div>
+                            <span class="acc-email">admin_bogota@sena.edu.co</span>
+                            <span class="acc-perms">GET · POST · BULK · PUT · PATCH (no DELETE)</span>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── PANEL DERECHO — FORMULARIO ─── -->
+            <div class="login-form-side">
+                <h3>Iniciar Sesión</h3>
+                <p class="subtitle">Autentícate para acceder al dashboard con tu token JWT.</p>
+
+                <!-- Banner de error -->
+                <div class="error-banner" id="error-banner" role="alert" aria-live="polite">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span id="error-msg">Error de autenticación</span>
+                </div>
+
+                <!-- Formulario de login -->
+                <form id="login-form" novalidate>
+
+                    <div class="form-group">
+                        <label class="form-label" for="input-correo">Correo Electrónico</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fa-regular fa-envelope input-icon"></i>
+                            <input
+                                class="form-input"
+                                type="email"
+                                id="input-correo"
+                                autocomplete="email"
+                                placeholder="correo@ejemplo.com"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="input-password">Contraseña</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fa-solid fa-lock input-icon"></i>
+                            <input
+                                class="form-input"
+                                type="password"
+                                id="input-password"
+                                autocomplete="current-password"
+                                placeholder="••••••••"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary btn-login" type="submit" id="login-btn">
+                        <span id="login-btn-text">Ingresar de forma segura</span>
+                        <i class="fa-solid fa-arrow-right-to-bracket" id="login-btn-icon"></i>
+                    </button>
+
+                </form>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- ═══════════════ FOOTER ═══════════════ -->
+    <footer>
+        Enterprise Hub — Onion Architecture · JWT Security · Actividad 7 SENA
+    </footer>
+
+    <!-- ═══════════════ SCRIPTS ═══════════════ -->
+    <!-- El orden importa: storage → api → auth -->
+    <script src="/static/js/storage.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth.js"></script>
+
+    <script>
+        /**
+         * login.html — Controlador de la pantalla de inicio de sesión
+         *
+         * 1. Si ya hay sesión activa → redirigir al dashboard
+         * 2. Manejar el submit del form
+         * 3. Llenar credentials con acceso rápido
+         */
+
+        // Redirigir si ya está autenticado
+        Auth.redirectIfAuthenticated();
+
+        // ── Manejo del formulario ──────────────────────────────────────
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const correo   = document.getElementById('input-correo').value.trim();
+            const password = document.getElementById('input-password').value;
+
+            if (!correo || !password) {
+                showError('Completa todos los campos.');
+                return;
+            }
+
+            setLoading(true);
+            const result = await Auth.login(correo, password);
+            setLoading(false);
+
+            if (result.ok) {
+                // Éxito: redirigir al dashboard
+                window.location.replace('/');
+            } else {
+                showError(result.errorMsg);
+            }
+        });
+
+        // ── Acceso rápido ──────────────────────────────────────────────
+        function quickLogin(correo, password) {
+            document.getElementById('input-correo').value   = correo;
+            document.getElementById('input-password').value = password;
+            document.getElementById('login-form').dispatchEvent(new Event('submit'));
+        }
+
+        // ── Helpers UI ────────────────────────────────────────────────
+        function showError(msg) {
+            const banner = document.getElementById('error-banner');
+            document.getElementById('error-msg').textContent = msg;
+            banner.classList.add('show');
+        }
+
+        function hideError() {
+            document.getElementById('error-banner').classList.remove('show');
+        }
+
+        function setLoading(loading) {
+            const btn  = document.getElementById('login-btn');
+            const text = document.getElementById('login-btn-text');
+            const icon = document.getElementById('login-btn-icon');
+
+            btn.disabled = loading;
+            if (loading) {
+                text.textContent = 'Verificando...';
+                icon.className   = 'fa-solid fa-spinner fa-spin';
+            } else {
+                text.textContent = 'Ingresar de forma segura';
+                icon.className   = 'fa-solid fa-arrow-right-to-bracket';
+            }
+        }
+
+        // Limpiar error al escribir
+        ['input-correo', 'input-password'].forEach(id => {
+            document.getElementById(id).addEventListener('input', hideError);
+        });
+
+        // Soporte teclado para acceso rápido
+        document.querySelectorAll('.quick-acc-item').forEach(el => {
+            el.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') el.click();
+            });
+        });
+    </script>
+
+</body>
+</html>

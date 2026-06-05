@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Enterprise Hub</title>
+    <meta name="description" content="Panel de gestión de compañías y empleados con control de permisos por ciudad — Actividad 7">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Estilos compartidos -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+
+    <!-- ═══════════════ LOADER GLOBAL ═══════════════ -->
+    <div id="global-loader" aria-live="polite" aria-label="Cargando">
+        <div class="loader-ring"></div>
+        <span class="loader-text">Procesando petición...</span>
+    </div>
+
+    <!-- ═══════════════ TOASTS ═══════════════ -->
+    <div id="toast-container" aria-live="polite" role="status"></div>
+
+    <!-- ═══════════════ NAVBAR ═══════════════ -->
+    <nav class="navbar">
+        <div class="nav-logo">
+            <i class="fa-solid fa-layer-group"></i> ENTERPRISE HUB
+        </div>
+        <div class="nav-right">
+            <div class="nav-user-info">
+                <div class="nav-avatar" id="user-avatar">--</div>
+                <span class="nav-email" id="user-email">cargando...</span>
+            </div>
+            <button class="btn btn-logout btn-sm" onclick="Auth.logout()" id="btn-logout">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> Salir
+            </button>
+        </div>
+    </nav>
+
+    <!-- ═══════════════ DASHBOARD ═══════════════ -->
+    <div class="dash-wrapper" role="main">
+
+        <!-- ─── HUD: Perfil + Política ─── -->
+        <div class="hud-grid">
+
+            <!-- Tarjeta de perfil -->
+            <div class="glass profile-card">
+                <div class="profile-info">
+                    <div class="profile-avatar" id="profile-avatar">--</div>
+                    <div class="profile-details">
+                        <h4 id="profile-email">Cargando...</h4>
+                        <p>Sesión activa con JWT válido</p>
+                        <div class="profile-badges">
+                            <span class="badge badge-role" id="user-role">—</span>
+                            <span class="badge" id="badge-city">—</span>
+                        </div>
+                    </div>
+                </div>
+                <i class="fa-solid fa-shield-halved profile-icon"></i>
+            </div>
+
+            <!-- Tarjeta de política activa -->
+            <div class="glass policy-card">
+                <div class="policy-header">
+                    <i class="fa-solid fa-gavel" id="policy-icon"></i>
+                    <span id="policy-title">Política de acceso activa</span>
+                </div>
+                <div class="policy-body" id="policy-text">
+                    Verificando permisos...
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ─── PANEL PRINCIPAL DE CRUD ─── -->
+        <div class="glass crud-panel">
+
+            <!-- Tabs de navegación -->
+            <div class="tabs-header" role="tablist">
+                <button class="tab-btn active" id="tab-btn-companias"
+                        role="tab" aria-selected="true" aria-controls="view-companias"
+                        onclick="switchTab('companias')">
+                    <i class="fa-solid fa-building"></i> Compañías
+                </button>
+                <button class="tab-btn" id="tab-btn-empleados"
+                        role="tab" aria-selected="false" aria-controls="view-empleados"
+                        onclick="switchTab('empleados')">
+                    <i class="fa-solid fa-users"></i> Empleados
+                </button>
+            </div>
+
+            <!-- ───────── VISTA COMPAÑÍAS ───────── -->
+            <div id="view-companias" class="tab-view" role="tabpanel" aria-labelledby="tab-btn-companias">
+
+                <!-- Barra de herramientas -->
+                <div class="search-bar">
+                    <!-- Buscar todos -->
+                    <div class="search-input-wrapper">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input class="form-input" type="text" id="search-companias"
+                               placeholder="Buscar compañía..." oninput="loadCompanias()">
+                    </div>
+
+                    <!-- Buscar por ID -->
+                    <div class="search-id-wrapper">
+                        <input class="form-input" type="number" id="search-cia-id"
+                               placeholder="ID" min="1" style="width:80px;">
+                        <button class="btn btn-secondary btn-sm" onclick="verCompaniaById()"
+                                title="Buscar por ID">
+                            <i class="fa-solid fa-hashtag"></i> Ver ID
+                        </button>
+                    </div>
+
+                    <!-- Acciones de la derecha -->
+                    <div class="toolbar-right">
+                        <button class="btn btn-primary btn-sm" id="btn-create-compania"
+                                onclick="openCreateCompaniaModal()">
+                            <i class="fa-solid fa-plus"></i> Registrar
+                        </button>
+                        <button class="btn btn-success btn-sm" id="btn-bulk-compania"
+                                onclick="openBulkModal()"
+                                title="Carga masiva de empleados (JSON)">
+                            <i class="fa-solid fa-file-import"></i> Bulk
+                        </button>
+                        <button class="btn btn-danger btn-sm" id="btn-bulk-delete-compania"
+                                title="Solo disponible para usuarios de Medellín" disabled>
+                            <i class="fa-solid fa-trash-can"></i> DELETE
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabla de compañías -->
+                <div class="table-wrapper">
+                    <table aria-label="Tabla de compañías">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Dirección</th>
+                                <th>Teléfono</th>
+                                <th style="width:160px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="companias-tbody">
+                            <tr>
+                                <td colspan="5" class="empty-row">
+                                    <i class="fa-solid fa-spinner fa-spin"></i>
+                                    <br>Cargando...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div><!-- /view-companias -->
+
+            <!-- ───────── VISTA EMPLEADOS ───────── -->
+            <div id="view-empleados" class="tab-view" role="tabpanel" aria-labelledby="tab-btn-empleados">
+
+                <!-- Barra de herramientas -->
+                <div class="search-bar">
+                    <div class="search-input-wrapper">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input class="form-input" type="text" id="search-empleados"
+                               placeholder="Buscar empleado..." oninput="loadEmpleados()">
+                    </div>
+
+                    <div class="search-id-wrapper">
+                        <input class="form-input" type="number" id="search-emp-id"
+                               placeholder="ID" min="1" style="width:80px;">
+                        <button class="btn btn-secondary btn-sm" onclick="verEmpleadoById()"
+                                title="Buscar empleado por ID">
+                            <i class="fa-solid fa-hashtag"></i> Ver ID
+                        </button>
+                    </div>
+
+                    <div class="toolbar-right">
+                        <button class="btn btn-primary btn-sm" id="btn-create-empleado"
+                                onclick="openCreateEmpleadoModal()">
+                            <i class="fa-solid fa-plus"></i> Registrar
+                        </button>
+                        <button class="btn btn-success btn-sm" id="btn-bulk-empleado"
+                                onclick="openBulkModal()"
+                                title="Carga masiva JSON">
+                            <i class="fa-solid fa-file-import"></i> Bulk
+                        </button>
+                        <button class="btn btn-danger btn-sm" id="btn-bulk-delete-empleado"
+                                title="Solo disponible para usuarios de Medellín" disabled>
+                            <i class="fa-solid fa-trash-can"></i> DELETE
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabla de empleados -->
+                <div class="table-wrapper">
+                    <table aria-label="Tabla de empleados">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre Completo</th>
+                                <th>Correo</th>
+                                <th>Cargo</th>
+                                <th>Salario</th>
+                                <th>Compañía</th>
+                                <th style="width:170px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="empleados-tbody">
+                            <tr>
+                                <td colspan="7" class="empty-row">
+                                    <i class="fa-solid fa-spinner fa-spin"></i>
+                                    <br>Cargando...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div><!-- /view-empleados -->
+
+        </div><!-- /crud-panel -->
+
+        <!-- ─── CONSOLA HTTP EN VIVO ─── -->
+        <div class="glass console-panel">
+            <div class="console-header">
+                <div class="console-title">
+                    <i class="fa-solid fa-terminal"></i> Consola HTTP en vivo
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="clearConsole()">
+                    <i class="fa-solid fa-eraser"></i> Limpiar
+                </button>
+            </div>
+            <div class="console-box" id="console-output" role="log" aria-live="polite">
+                <div class="log-entry" style="color:var(--text-3);font-style:italic;">
+                    Esperando peticiones a la API...
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /dash-wrapper -->
+
+    <!-- ═══════════════ FOOTER ═══════════════ -->
+    <footer>
+        Enterprise Hub — Onion Architecture · Repository Pattern · JWT · Actividad 7 SENA
+    </footer>
+
+    <!-- ═══════════════ MODALES ═══════════════ -->
+
+    <!-- Modal Crear/Editar Compañía (POST y PUT) -->
+    <div class="modal" id="cia-modal" role="dialog" aria-modal="true" aria-labelledby="cia-modal-title">
+        <div class="glass modal-card">
+            <div class="modal-header">
+                <h3 id="cia-modal-title">Compañía</h3>
+                <button class="modal-close" onclick="closeModal('cia-modal')" aria-label="Cerrar">&times;</button>
+            </div>
+            <form id="cia-form" novalidate onsubmit="return false;">
+                <div class="form-group">
+                    <label class="form-label" for="cia-nombre">Nombre</label>
+                    <input class="form-input" type="text" id="cia-nombre" placeholder="Nombre de la compañía" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="cia-direccion">Dirección</label>
+                    <input class="form-input" type="text" id="cia-direccion" placeholder="Dirección física" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="cia-telefono">Teléfono</label>
+                    <input class="form-input" type="tel" id="cia-telefono" placeholder="601 000 0000" required>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('cia-modal')">Cancelar</button>
+                <button class="btn btn-primary" id="cia-save-btn">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal PATCH Compañía -->
+    <div class="modal" id="patch-cia-modal" role="dialog" aria-modal="true" aria-labelledby="patch-cia-modal-title">
+        <div class="glass modal-card">
+            <div class="modal-header">
+                <h3 id="patch-cia-modal-title">PATCH Compañía</h3>
+                <button class="modal-close" onclick="closeModal('patch-cia-modal')" aria-label="Cerrar">&times;</button>
+            </div>
+            <p style="font-size:12px;color:var(--text-2);margin-bottom:18px;">
+                <i class="fa-solid fa-circle-info" style="color:var(--blue);"></i>
+                Solo completa los campos que deseas actualizar (los demás no cambiarán).
+            </p>
+            <form id="patch-cia-form" novalidate onsubmit="return false;">
+                <div class="form-group">
+                    <label class="form-label" for="patch-cia-nombre">Nombre (opcional)</label>
+                    <input class="form-input" type="text" id="patch-cia-nombre">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="patch-cia-direccion">Dirección (opcional)</label>
+                    <input class="form-input" type="text" id="patch-cia-direccion">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="patch-cia-telefono">Teléfono (opcional)</label>
+                    <input class="form-input" type="tel" id="patch-cia-telefono">
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('patch-cia-modal')">Cancelar</button>
+                <button class="btn btn-amber" id="patch-cia-save-btn">
+                    <i class="fa-solid fa-wrench"></i> Aplicar PATCH
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Crear/Editar Empleado (POST y PUT) -->
+    <div class="modal" id="emp-modal" role="dialog" aria-modal="true" aria-labelledby="emp-modal-title">
+        <div class="glass modal-card">
+            <div class="modal-header">
+                <h3 id="emp-modal-title">Empleado</h3>
+                <button class="modal-close" onclick="closeModal('emp-modal')" aria-label="Cerrar">&times;</button>
+            </div>
+            <form id="emp-form" novalidate onsubmit="return false;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+                    <div class="form-group">
+                        <label class="form-label" for="emp-nombre">Nombre</label>
+                        <input class="form-input" type="text" id="emp-nombre" placeholder="Nombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="emp-apellido">Apellido</label>
+                        <input class="form-input" type="text" id="emp-apellido" placeholder="Apellido" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="emp-correo">Correo Electrónico</label>
+                    <input class="form-input" type="email" id="emp-correo" placeholder="correo@empresa.com" required>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+                    <div class="form-group">
+                        <label class="form-label" for="emp-cargo">Cargo</label>
+                        <input class="form-input" type="text" id="emp-cargo" placeholder="Desarrollador, QA..." required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="emp-salario">Salario (COP)</label>
+                        <input class="form-input" type="number" id="emp-salario" step="0.01" min="0" placeholder="3500000" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="emp-compania">Compañía</label>
+                    <select class="form-select" id="emp-compania" required>
+                        <option value="">— Selecciona una compañía —</option>
+                    </select>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('emp-modal')">Cancelar</button>
+                <button class="btn btn-primary" id="emp-save-btn">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal PATCH Empleado -->
+    <div class="modal" id="patch-emp-modal" role="dialog" aria-modal="true" aria-labelledby="patch-emp-modal-title">
+        <div class="glass modal-card">
+            <div class="modal-header">
+                <h3 id="patch-emp-modal-title">PATCH Empleado</h3>
+                <button class="modal-close" onclick="closeModal('patch-emp-modal')" aria-label="Cerrar">&times;</button>
+            </div>
+            <p style="font-size:12px;color:var(--text-2);margin-bottom:18px;">
+                <i class="fa-solid fa-circle-info" style="color:var(--blue);"></i>
+                Solo completa los campos que deseas actualizar.
+            </p>
+            <form id="patch-emp-form" novalidate onsubmit="return false;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+                    <div class="form-group">
+                        <label class="form-label" for="patch-emp-nombre">Nombre</label>
+                        <input class="form-input" type="text" id="patch-emp-nombre">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="patch-emp-apellido">Apellido</label>
+                        <input class="form-input" type="text" id="patch-emp-apellido">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="patch-emp-correo">Correo</label>
+                    <input class="form-input" type="email" id="patch-emp-correo">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+                    <div class="form-group">
+                        <label class="form-label" for="patch-emp-cargo">Cargo</label>
+                        <input class="form-input" type="text" id="patch-emp-cargo">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="patch-emp-salario">Salario</label>
+                        <input class="form-input" type="number" id="patch-emp-salario" step="0.01">
+                    </div>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('patch-emp-modal')">Cancelar</button>
+                <button class="btn btn-amber" id="patch-emp-save-btn">
+                    <i class="fa-solid fa-wrench"></i> Aplicar PATCH
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Bulk Create (POST masivo de empleados) -->
+    <div class="modal" id="bulk-modal" role="dialog" aria-modal="true" aria-labelledby="bulk-modal-title">
+        <div class="glass modal-card modal-lg">
+            <div class="modal-header">
+                <h3 id="bulk-modal-title">
+                    <i class="fa-solid fa-file-import" style="color:var(--green);"></i>
+                    Carga Masiva de Empleados (POST Bulk)
+                </h3>
+                <button class="modal-close" onclick="closeModal('bulk-modal')" aria-label="Cerrar">&times;</button>
+            </div>
+            <p style="font-size:12px;color:var(--text-2);margin-bottom:14px;">
+                Ingresa un <strong>array JSON</strong> con los empleados a crear.
+                Se enviará a <code style="color:var(--blue);">POST /api/empleados/bulk</code>.
+            </p>
+            <div class="form-group">
+                <label class="form-label" for="bulk-textarea">JSON de empleados</label>
+                <textarea class="form-textarea" id="bulk-textarea" rows="12"
+                          placeholder='[{"nombre":"Ana","apellido":"López",...}]'></textarea>
+                <span class="form-hint">
+                    <i class="fa-solid fa-lightbulb" style="color:var(--amber);"></i>
+                    Campos requeridos por empleado: nombre, apellido, correo, cargo, salario, compania_id
+                </span>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('bulk-modal')">Cancelar</button>
+                <button class="btn btn-success" id="bulk-execute-btn" onclick="submitBulkCarga()">
+                    <i class="fa-solid fa-bolt"></i> Ejecutar Carga
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalle (GET BY ID) -->
+    <div class="modal" id="detail-modal" role="dialog" aria-modal="true" aria-labelledby="detail-modal-title">
+        <div class="glass modal-card modal-lg">
+            <div class="modal-header">
+                <h3 id="detail-modal-title">Detalle</h3>
+                <button class="modal-close" onclick="closeModal('detail-modal')" aria-label="Cerrar">&times;</button>
+            </div>
+            <div id="detail-modal-body"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('detail-modal')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación (antes de DELETE) -->
+    <div class="modal" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+        <div class="glass modal-card modal-sm" style="text-align:center;">
+            <div class="confirm-icon">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 id="confirm-title" style="font-family:var(--font-ui);font-size:17px;margin-bottom:8px;"></h3>
+            <p id="confirm-subtitle" style="font-size:13px;color:var(--text-2);margin-bottom:0;"></p>
+            <div class="modal-footer" style="justify-content:center;">
+                <button class="btn btn-secondary" onclick="closeModal('confirm-modal')">Cancelar</button>
+                <button class="btn btn-danger" id="confirm-ok-btn">
+                    <i class="fa-solid fa-trash-can"></i> Sí, eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ SCRIPTS ═══════════════ -->
+    <!-- Orden: storage → permissions → api → auth → dashboard -->
+    <script src="/static/js/storage.js"></script>
+    <script src="/static/js/permissions.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/dashboard.js"></script>
+
+</body>
+</html>
