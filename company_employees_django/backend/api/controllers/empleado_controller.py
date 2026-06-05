@@ -46,7 +46,7 @@ class EmpleadoListController(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [IsAuthenticatedUser()]
-        return [IsAdminOrUsuario(), PoliticaAdminCiudad()]
+        return [IsAdminOrUsuario(), EsPropietarioDeCompania(), PoliticaAdminCiudad()]
 
     def get(self, request: Request) -> Response:
         """Listar todos los empleados (con paginación)."""
@@ -201,7 +201,7 @@ class EmpleadoBulkController(APIView):
     def get_permissions(self):
         if self.request.method == 'DELETE':
             return [IsAdmin(), PoliticaAdminCiudad()]
-        return [IsAdminOrUsuario(), PoliticaAdminCiudad()]
+        return [IsAdminOrUsuario(), EsPropietarioDeCompania(), PoliticaAdminCiudad()]
 
     def post(self, request: Request) -> Response:
         logger.info("POST /api/empleados/bulk")

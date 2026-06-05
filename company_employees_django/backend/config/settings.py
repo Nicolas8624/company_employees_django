@@ -11,18 +11,37 @@ Tecnologías:
 - Logging de Python
 """
 import logging
+import os
 import sys
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Cargar variables de entorno desde el archivo .env si existe
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / '.env')
+except ImportError:
+    pass
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-1g_-lsqux+=n__2)8q7(rr3urzwa3%i7oy(45gftf=is=@y^bk'
+# La SECRET_KEY DEBE estar definida en el archivo .env (ver .env.example).
+# No hay fallback: si no está configurada, la aplicación falla de forma explícita.
+_secret_key = os.environ.get('SECRET_KEY')
+if not _secret_key:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        "La variable de entorno SECRET_KEY no está configurada. "
+        "Copia .env.example a .env y define un valor seguro para SECRET_KEY."
+    )
+SECRET_KEY = _secret_key
+
+# Clave de firma para tokens JWT — también debe estar en .env
+JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', SECRET_KEY)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -67,7 +86,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [BASE_DIR.parent / 'frontend'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -130,8 +149,15 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Archivos estáticos del frontend (css/, js/)
+# Permite servir frontend/css/styles.css y frontend/js/*.js desde Django
+STATICFILES_DIRS = [
+    BASE_DIR.parent / 'frontend',
+]
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 
 
 # ============================================================
@@ -161,7 +187,7 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ALGORITHM': 'HS256',
-    'SIGNING_KEY': SECRET_KEY,
+    'SIGNING_KEY': JWT_SECRET_KEY,
     'AUTH_HEADER_TYPES': ('Bearer',),
     # No verificar contra modelo User de Django
     'USER_ID_FIELD': 'id',

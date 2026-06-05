@@ -186,6 +186,9 @@ class CompaniaEmpleadosController(APIView):
     GET /api/companias/{id}/empleados → Obtener empleados de una compañía
     """
 
+    def get_permissions(self):
+        return [IsAuthenticatedUser()]
+
     def get(self, request: Request, pk: int) -> Response:
         """Obtener todos los empleados de una compañía."""
         logger.info("GET /api/companias/%s/empleados", pk)

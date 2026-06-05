@@ -188,6 +188,7 @@ class EmpleadoService:
             
             existing.__post_init__()
             existing.validar()
+            self._validar_negocio_empleado(existing)
             
             updated = self._uow.empleado_repository.patch(empleado_id, data)
             self._uow.commit()

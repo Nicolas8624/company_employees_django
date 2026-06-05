@@ -56,11 +56,11 @@ class EsPropietarioDeCompania(BasePermission):
     """
     Política de propiedad:
     - ADMIN puede todo.
-    - USUARIO solo puede editar/eliminar empleados de su propia compañía.
+    - USUARIO solo puede editar/eliminar/crear empleados de su propia compañía.
 
     Módulo 5 — Autorización por políticas.
     """
-    message = "No tienes permiso para modificar empleados de otra compañía."
+    message = "No tienes permiso para operar sobre empleados de otra compañía o moverlos de compañía."
 
     def has_permission(self, request, view):
         user = getattr(request, "user", None)
@@ -71,10 +71,37 @@ class EsPropietarioDeCompania(BasePermission):
         if getattr(user, "rol", "") == "ADMIN":
             return True
 
-        # Para PUT/PATCH necesitamos verificar la compañía del empleado.
-        # has_permission no tiene acceso al objeto, así que verificamos
-        # contra el body del request (compania_id del empleado a crear/editar)
-        # La verificación a nivel de objeto se hace en has_object_permission.
+        # Para USUARIO, validamos que si intenta crear o modificar con compania_id, coincida con la propia.
+        user_compania_id = getattr(user, "compania_id", None)
+        if user_compania_id is None:
+            return False
+
+        # Validación para creación masiva (bulk): "empleados" es una lista de objetos
+        empleados_bulk = request.data.get("empleados")
+        if isinstance(empleados_bulk, list):
+            for emp in empleados_bulk:
+                emp_compania_id = emp.get("compania_id") if isinstance(emp, dict) else None
+                if emp_compania_id is not None:
+                    try:
+                        if int(emp_compania_id) != int(user_compania_id):
+                            logger.warning(
+                                "Política bulk: usuario %s intenta crear empleado en compañía %s (la suya: %s)",
+                                getattr(user, "correo", "?"), emp_compania_id, user_compania_id
+                            )
+                            return False
+                    except (ValueError, TypeError):
+                        return False
+            return True
+
+        # Validación para creación individual: "compania_id" en el body
+        req_compania_id = request.data.get("compania_id")
+        if req_compania_id is not None:
+            try:
+                if int(req_compania_id) != int(user_compania_id):
+                    return False
+            except (ValueError, TypeError):
+                return False
+
         return True
 
     def has_object_permission(self, request, view, obj):

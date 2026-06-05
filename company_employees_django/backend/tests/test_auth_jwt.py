@@ -136,6 +136,16 @@ class RolePermissionTests(TestCase):
         resp = self.client.get("/api/empleados")
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_sin_token_get_companias_empleados_retorna_401(self):
+        self.client.credentials()
+        resp = self.client.get(f"/api/companias/{self.compania.pk}/empleados")
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_con_token_get_companias_empleados_retorna_200(self):
+        self._auth("user@otra.com", "User123!")
+        resp = self.client.get(f"/api/companias/{self.compania.pk}/empleados")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
 
 class EsPropietarioDeCompaniaTests(TestCase):
     """Módulo 5 — Política EsPropietarioDeCompania."""
@@ -192,6 +202,49 @@ class EsPropietarioDeCompaniaTests(TestCase):
             {"cargo": "Hacker"}, format="json"
         )
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_usuario_propietario_no_puede_mover_empleado_a_otra_compania(self):
+        """Un usuario con rol USUARIO no puede cambiar el compania_id de su empleado."""
+        self._auth("user@cia1.com", "User!")
+        resp = self.client.patch(
+            f"/api/empleados/{self.emp_cia1.pk}",
+            {"compania_id": self.cia2.pk}, format="json"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_usuario_no_puede_crear_empleado_en_otra_compania(self):
+        """Un usuario con rol USUARIO no puede crear un empleado en otra compañía."""
+        self._auth("user@cia1.com", "User!")
+        resp = self.client.post(
+            "/api/empleados",
+            {
+                "nombre": "Nuevo",
+                "apellido": "Emp",
+                "correo": "nuevo.emp.cia2@test.com",
+                "cargo": "Dev",
+                "salario": "2000.00",
+                "compania_id": self.cia2.pk
+            },
+            format="json"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_usuario_puede_crear_empleado_en_su_compania(self):
+        """Un usuario con rol USUARIO puede crear un empleado en su propia compañía."""
+        self._auth("user@cia1.com", "User!")
+        resp = self.client.post(
+            "/api/empleados",
+            {
+                "nombre": "Nuevo",
+                "apellido": "Emp",
+                "correo": "nuevo.emp.cia1@test.com",
+                "cargo": "Dev",
+                "salario": "2000.00",
+                "compania_id": self.cia1.pk
+            },
+            format="json"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
 
 
 class PoliticaAdminCiudadTests(TestCase):
@@ -258,3 +311,127 @@ class PoliticaAdminCiudadTests(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.data["usuario"]["ciudad"], "Bogotá")
         self.assertIn("token", resp.data)
+
+
+class BulkEmpleadoPermissionTests(TestCase):
+    """
+    Módulo 5 — Política EsPropietarioDeCompania en creación masiva (bulk).
+
+    Verifica que POST /api/empleados/bulk aplique correctamente la política
+    de propiedad: un USUARIO solo puede crear empleados en su propia compañía.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.cia1 = CompaniaModel.objects.create(nombre="CiaBulk1", direccion="Dir1", telefono="1")
+        self.cia2 = CompaniaModel.objects.create(nombre="CiaBulk2", direccion="Dir2", telefono="2")
+
+        # ADMIN (puede crear en cualquier compañía)
+        UsuarioModel.objects.create(
+            correo="admin@bulk.com",
+            password_hash=make_password("Admin123!"),
+            rol="ADMIN",
+        )
+        # USUARIO de cia1
+        UsuarioModel.objects.create(
+            correo="user@bulk1.com",
+            password_hash=make_password("User123!"),
+            rol="USUARIO",
+            compania=self.cia1,
+        )
+        # USUARIO de cia2
+        UsuarioModel.objects.create(
+            correo="user@bulk2.com",
+            password_hash=make_password("User123!"),
+            rol="USUARIO",
+            compania=self.cia2,
+        )
+
+    def _auth(self, correo, password):
+        token = _get_token(self.client, correo, password)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+    def test_admin_puede_crear_bulk_en_cualquier_compania(self):
+        """ADMIN puede crear empleados en cualquier compañía con bulk."""
+        self._auth("admin@bulk.com", "Admin123!")
+        payload = {
+            "empleados": [
+                {
+                    "nombre": "A", "apellido": "Uno", "correo": "a.uno@bulk.com",
+                    "cargo": "Dev", "salario": "1000.00", "compania_id": self.cia1.pk,
+                },
+                {
+                    "nombre": "B", "apellido": "Dos", "correo": "b.dos@bulk.com",
+                    "cargo": "QA", "salario": "1200.00", "compania_id": self.cia2.pk,
+                },
+            ]
+        }
+        resp = self.client.post("/api/empleados/bulk", payload, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(resp.data), 2)
+
+    def test_usuario_propietario_puede_crear_bulk_en_su_compania(self):
+        """USUARIO puede crear bulk solo en su propia compañía."""
+        self._auth("user@bulk1.com", "User123!")
+        payload = {
+            "empleados": [
+                {
+                    "nombre": "C", "apellido": "Tres", "correo": "c.tres@bulk.com",
+                    "cargo": "Dev", "salario": "1500.00", "compania_id": self.cia1.pk,
+                },
+                {
+                    "nombre": "D", "apellido": "Cuatro", "correo": "d.cuatro@bulk.com",
+                    "cargo": "PM", "salario": "1800.00", "compania_id": self.cia1.pk,
+                },
+            ]
+        }
+        resp = self.client.post("/api/empleados/bulk", payload, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(resp.data), 2)
+
+    def test_usuario_no_puede_crear_bulk_en_otra_compania(self):
+        """USUARIO de cia1 recibe 403 si intenta crear empleados en cia2."""
+        self._auth("user@bulk1.com", "User123!")
+        payload = {
+            "empleados": [
+                {
+                    "nombre": "E", "apellido": "Cinco", "correo": "e.cinco@bulk.com",
+                    "cargo": "Dev", "salario": "1000.00", "compania_id": self.cia2.pk,
+                },
+            ]
+        }
+        resp = self.client.post("/api/empleados/bulk", payload, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_usuario_no_puede_crear_bulk_con_lista_mixta(self):
+        """USUARIO de cia1 recibe 403 si una de las entradas bulk es de cia2."""
+        self._auth("user@bulk1.com", "User123!")
+        payload = {
+            "empleados": [
+                {
+                    "nombre": "F", "apellido": "Seis", "correo": "f.seis@bulk.com",
+                    "cargo": "Dev", "salario": "1000.00", "compania_id": self.cia1.pk,
+                },
+                {
+                    "nombre": "G", "apellido": "Siete", "correo": "g.siete@bulk.com",
+                    "cargo": "QA", "salario": "1200.00", "compania_id": self.cia2.pk,
+                },
+            ]
+        }
+        resp = self.client.post("/api/empleados/bulk", payload, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_sin_token_bulk_retorna_401(self):
+        """Sin token, el endpoint bulk devuelve 401."""
+        self.client.credentials()
+        payload = {
+            "empleados": [
+                {
+                    "nombre": "H", "apellido": "Ocho", "correo": "h.ocho@bulk.com",
+                    "cargo": "Dev", "salario": "1000.00", "compania_id": self.cia1.pk,
+                }
+            ]
+        }
+        resp = self.client.post("/api/empleados/bulk", payload, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
