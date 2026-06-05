@@ -370,4 +370,11 @@ company_employees_django/db.sqlite3
 company_employees_django/logs/
 .venv/
 venv/
-ENV/
+ENV/
+
+# Nuevas rutas tras reestructuración backend/frontend (2025)
+# Ignorar variables de entorno y base de datos local del backend
+company_employees_django/backend/.env
+company_employees_django/backend/db.sqlite3
+company_employees_django/backend/logs/
+
